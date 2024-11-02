@@ -7,14 +7,24 @@ import {
   inviteSchema,
   updateUserSchema,
   passwordSchema,
+  companySchema,
 } from '../schema/index.js';
 import {
   validateData,
   authMiddleware,
   adminMiddleware,
+  checkUserLimit,
 } from '../middlewares/index.js';
 
 const adminRoute = express.Router();
+
+adminRoute.post(
+  '/register-company',
+  authMiddleware,
+  adminMiddleware,
+  validateData(companySchema),
+  adminCtrlr.registerCompany
+);
 
 adminRoute.get(
   '/dashboard-stats',
@@ -59,6 +69,7 @@ adminRoute.post(
   authMiddleware,
   adminMiddleware,
   validateData(inviteSchema),
+  checkUserLimit,
   adminCtrlr.inviteUser
 );
 
@@ -68,6 +79,7 @@ adminRoute.post(
   adminMiddleware,
   cvsUpload.single('csvFile'),
   validateData(inviteSchema),
+  checkUserLimit,
   adminCtrlr.inviteBulkUsers
 );
 

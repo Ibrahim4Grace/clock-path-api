@@ -751,3 +751,127 @@ export const adminPasswordDocs = {
     },
   },
 };
+
+export const companyDocs = {
+  paths: {
+    '/api/v1/admin/register-company': {
+      post: {
+        summary: 'Register a new company',
+        tags: ['Admin', 'Company Registration'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: {
+                    type: 'string',
+                    example: 'My New Company',
+                  },
+                  address: {
+                    type: 'string',
+                    example: '1234 Business Rd, Cityville, ST 12345',
+                  },
+                },
+                required: ['name', 'address'],
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Company registered successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Company registered successfully',
+                    },
+                    company: {
+                      type: 'object',
+                      properties: {
+                        _id: {
+                          type: 'string',
+                          example: '60d21b4667d0d8992e610c85',
+                        },
+                        name: { type: 'string', example: 'My New Company' },
+                        address: {
+                          type: 'string',
+                          example: '1234 Business Rd, Cityville, ST 12345',
+                        },
+                        adminId: {
+                          type: 'string',
+                          example: '60d21b4667d0d8992e610c85',
+                        },
+                        planId: {
+                          type: 'string',
+                          example: '60d21b4667d0d8992e610c85',
+                        },
+                        currentUserCount: { type: 'number', example: 1 },
+                        isActive: { type: 'boolean', example: true },
+                        createdAt: {
+                          type: 'string',
+                          format: 'date-time',
+                          example: '2024-10-31T10:09:24.323Z',
+                        },
+                        updatedAt: {
+                          type: 'string',
+                          format: 'date-time',
+                          example: '2024-10-31T20:39:08.983Z',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Invalid input or no active subscription found.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example:
+                        'No active subscription found. Please purchase a plan first.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          409: {
+            description: 'Conflict - Admin already has a registered company',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'Admin already has a registered company',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: 'Server error',
+          },
+        },
+      },
+    },
+  },
+};

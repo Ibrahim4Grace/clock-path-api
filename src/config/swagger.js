@@ -12,6 +12,7 @@ import {
   adminPasswordDocs,
   planDocs,
   subscriptionDocs,
+  companyDocs,
 } from '../docs/index.js';
 
 const swaggerOptions = {
@@ -41,6 +42,7 @@ swaggerDocs.paths = {
   ...adminPasswordDocs.paths,
   ...planDocs.paths,
   ...subscriptionDocs.paths,
+  ...companyDocs.paths,
 };
 
 export const setupSwagger = (app) => {

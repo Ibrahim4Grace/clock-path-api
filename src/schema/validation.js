@@ -81,6 +81,19 @@ export const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+export const companySchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Company name is required')
+    .transform(sanitizeInput),
+
+  address: z
+    .string()
+    .min(1, 'Company address must be at least 6 characters')
+    .transform(sanitizeInput),
+});
+
 export const inviteSchema = z.object({
   emails: z
     .array(z.string())
@@ -169,11 +182,7 @@ export const plansSchema = z.object({
     .trim()
     .min(1, 'Plan name is required')
     .transform(sanitizeInput),
-  duration: z
-    .string()
-    .trim()
-    .min(1, 'Plan name is required')
-    .transform(sanitizeInput),
+  duration: z.string().trim().optional().transform(sanitizeInput),
   features: z
     .string()
     .trim()

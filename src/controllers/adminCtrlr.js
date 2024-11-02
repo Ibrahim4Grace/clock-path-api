@@ -1,7 +1,13 @@
-import { cloudinary } from '../config/index.js';
-import { User, Admin, Request, ClockIn } from '../models/index.js';
-import PDFDocument from 'pdfkit';
+import { cloudinary, frontendUrl } from '../config/index.js';
 import fs from 'fs';
+import {
+  User,
+  Admin,
+  Request,
+  ClockIn,
+  Subscription,
+  Company,
+} from '../models/index.js';
 import {
   sendJsonResponse,
   generateAttendanceSummary,
@@ -13,6 +19,7 @@ import {
   BadRequest,
   ServerError,
   Unauthorized,
+  Conflict,
 } from '../middlewares/index.js';
 import {
   log,
@@ -23,6 +30,47 @@ import {
   saveInviteToDatabase,
   formatTime,
 } from '../utils/index.js';
+
+export const registerCompany = asyncHandler(async (req, res) => {
+  const { name, address } = req.body;
+  const admin = req.currentAdmin;
+
+  const existingCompany = await Company.findOne({ adminId: admin._id });
+  if (existingCompany) {
+    throw new Conflict('Admin already has a registered company');
+  }
+
+  const subscription = await Subscription.findOne({
+    admin: admin._id,
+    status: 'active',
+    paymentStatus: 'completed',
+  })
+    .sort({ createdAt: -1 })
+    .populate('plan');
+
+  if (!subscription) {
+    throw new BadRequest(
+      'No active subscription found. Please purchase a plan first.'
+    );
+  }
+
+  if (subscription.isExpired) {
+    throw new BadRequest(
+      'Current subscription has expired. Please renew your subscription.'
+    );
+  }
+
+  const company = await Company.create({
+    name,
+    address,
+    adminId: admin._id,
+    planId: subscription.plan._id,
+    currentUserCount: 1,
+    isActive: true,
+  });
+
+  sendJsonResponse(res, 201, 'Company registered successfully', company);
+});
 
 export const getAdminStats = asyncHandler(async (req, res) => {
   const totalUsers = await User.countDocuments();
@@ -120,13 +168,15 @@ export const inviteUser = asyncHandler(async (req, res) => {
   const { emails } = req.body;
   const admin = req.currentAdmin;
   const adminName = req.currentAdmin.full_name;
+  const company = req.company;
 
   const invites = [];
 
   for (const email of Array.isArray(emails) ? emails : [emails]) {
     const token = generateInviteToken();
-    const invitationLink = `${process.env.FRONTEND_URL_DEV}/accept-invite?token=${token}`;
-    const declineLink = `${process.env.FRONTEND_URL_DEV}/decline-invite?token=${token}`;
+
+    const invitationLink = `${frontendUrl}/accept-invite?token=${token}`;
+    const declineLink = `${frontendUrl}/decline-invite?token=${token}`;
 
     await saveInviteToDatabase(email, token, admin, adminName);
 
@@ -140,6 +190,10 @@ export const inviteUser = asyncHandler(async (req, res) => {
 
     invites.push({ email, status: 'pending' });
   }
+
+  // Update company user count
+  company.currentUserCount += invites.length;
+  await company.save();
 
   sendJsonResponse(res, 200, 'Invitation(s) sent successfully.', invites);
 });
@@ -153,8 +207,8 @@ export const inviteBulkUsers = asyncHandler(async (req, res) => {
 
   for (const email of emails) {
     const token = generateInviteToken();
-    const invitationLink = `${process.env.FRONTEND_URL_DEV}/accept-invite?token=${token}`;
-    const declineLink = `${process.env.FRONTEND_URL_DEV}/decline-invite?token=${token}`;
+    const invitationLink = `${frontendUrl}/accept-invite?token=${token}`;
+    const declineLink = `${frontendUrl}/decline-invite?token=${token}`;
 
     await saveInviteToDatabase(email, token, admin, adminName);
 
@@ -168,6 +222,9 @@ export const inviteBulkUsers = asyncHandler(async (req, res) => {
 
     invites.push({ email, status: 'pending' });
   }
+
+  company.currentUserCount += invites.length;
+  await company.save();
 
   sendJsonResponse(res, 200, 'Bulk invitations sent successfully.', invites);
 });

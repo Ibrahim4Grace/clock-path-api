@@ -7,6 +7,7 @@ import Request from './request.js';
 import ClockIn from './clockIn.js';
 import Subscription from './subscription.js';
 import Plan from './plan.js';
+import Company from './company.js';
 
 export {
   User,
@@ -18,4 +19,5 @@ export {
   ClockIn,
   Subscription,
   Plan,
+  Company,
 };

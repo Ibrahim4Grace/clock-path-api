@@ -33,3 +33,8 @@ export const customEnv = {
   cloudinaryApiName: process.env.CLOUDINARY_API_NAME,
   cloudinarySecretName: process.env.CLOUDINARY_SECRET_NAME,
 };
+
+export const frontendUrl =
+  process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL_PROD
+    : process.env.FRONTEND_URL_DEV;
