@@ -7,6 +7,8 @@ import {
   forgetPswdSchema,
   resetPswdSchema,
   loginSchema,
+  verifyOtpSchema,
+  newPasswordSchema,
 } from '../schema/index.js';
 
 const authRoute = express.Router();
@@ -14,31 +16,37 @@ const authRoute = express.Router();
 authRoute.post(
   '/register',
   validateData(registerSchema),
-  authCtrlr.registerPage
+  authCtrlr.registerUser
 );
-
 authRoute.post('/verify-otp', validateData(verifySchema), authCtrlr.verifyOtp);
-
 authRoute.post(
-  '/forget-password',
+  '/password/forgot',
   validateData(forgetPswdSchema),
-  authCtrlr.forgetPasswordOtp
+  authCtrlr.forgotPassword
 );
-
 authRoute.post(
-  '/verify-forget-password-otp',
+  '/password/verify-forget-password-otp',
   validateData(verifySchema),
-  authCtrlr.verifyForgetPwdOtp
+  authCtrlr.verifyOtp
 );
-
 authRoute.post(
-  '/reset-password',
+  '/password/reset',
   validateData(resetPswdSchema),
   authCtrlr.resetPassword
 );
-
-authRoute.post('/login', validateData(loginSchema), authCtrlr.loginPage);
-
+authRoute.post('/admin/login', validateData(loginSchema), authCtrlr.adminLogin);
 authRoute.post('/refresh-token', authCtrlr.refreshAccessToken);
+
+authRoute.post(
+  '/password/verify-otp',
+  validateData(verifyOtpSchema),
+  authCtrlr.verifyPasswordOtp
+);
+authRoute.post(
+  '/password/new',
+  validateData(newPasswordSchema),
+  authCtrlr.setNewPassword
+);
+authRoute.post('/user/login', validateData(loginSchema), authCtrlr.userLogin);
 
 export default authRoute;

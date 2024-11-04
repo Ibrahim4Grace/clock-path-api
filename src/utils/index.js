@@ -7,3 +7,4 @@ export * from './parseCSV.js';
 export * from './pagination.js';
 export * from './formatTime.js';
 export * from './paymentRequest.js';
+export * from './geocoding.js';

@@ -23,7 +23,7 @@ import {
   welcomeEmail,
 } from '../utils/index.js';
 
-export const registerPage = asyncHandler(async (req, res) => {
+export const registerUser = asyncHandler(async (req, res) => {
   const { full_name, email, password } = req.body;
 
   const existingAdmin = await Admin.findOne({ email });
@@ -79,7 +79,7 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   sendJsonResponse(res, 200, 'Email Verified successfully.');
 });
 
-export const forgetPasswordOtp = asyncHandler(async (req, res) => {
+export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   const admin = await Admin.findOne({ email });
@@ -160,31 +160,29 @@ export const resetPassword = asyncHandler(async (req, res) => {
   sendJsonResponse(res, 200, 'Password reset successfully');
 });
 
-export const loginPage = asyncHandler(async (req, res) => {
+export const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  const account =
-    (await Admin.findOne({ email }).select('+password')) ||
-    (await User.findOne({ email }).select('+password'));
+  const admin = await Admin.findOne({ email }).select('+password');
 
-  if (!account) {
+  if (!admin) {
     throw new ResourceNotFound('Invalid email or password');
   }
 
-  if (!account.isEmailVerified) {
+  if (!admin.isEmailVerified) {
     throw new Forbidden('Verify your email before sign in.');
   }
 
-  const isPasswordMatch = await account.matchPassword(password);
+  const isPasswordMatch = await admin.matchPassword(password);
   if (!isPasswordMatch) {
     throw new Unauthorized('Invalid email or passwordd');
   }
 
-  const emailContent = loginNotification(account);
+  const emailContent = loginNotification(admin);
   await sendMail(emailContent);
 
   // Convert ObjectId to string explicitly
-  const userId = account._id.toString();
+  const userId = admin._id.toString();
 
   const { accessToken, refreshToken } = generateTokensAndSetCookies(
     res,
@@ -192,7 +190,7 @@ export const loginPage = asyncHandler(async (req, res) => {
   );
 
   // Remove sensitive data before sending response
-  const userResponse = account.toObject();
+  const userResponse = admin.toObject();
   delete userResponse.password;
 
   sendJsonResponse(
@@ -200,7 +198,7 @@ export const loginPage = asyncHandler(async (req, res) => {
     200,
     'Login successful',
     {
-      user: userResponse,
+      admin: userResponse,
     },
     accessToken,
     refreshToken
@@ -232,5 +230,110 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
     null,
     accessToken,
     newRefreshToken
+  );
+});
+
+export const verifyPasswordOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ResourceNotFound('User not found');
+  }
+
+  const otpRecord = await OTP.findOne({ userOrAdmin: user._id }).sort({
+    createdAt: -1,
+  });
+  if (!otpRecord) {
+    throw new BadRequest('OTP not found or expired');
+  }
+
+  const isOTPMatch = await bcrypt.compare(otp, otpRecord.otp);
+  if (!isOTPMatch) {
+    throw new Unauthorized('Invalid OTP');
+  }
+
+  await OTP.deleteOne({ _id: otpRecord._id });
+  const { accessToken } = generateTokensAndSetCookies(res, user._id);
+
+  sendJsonResponse(
+    res,
+    200,
+    'OTP verified successfully. Please set your new password.',
+    {
+      success: true,
+      accessToken,
+    }
+  );
+});
+
+export const setNewPassword = asyncHandler(async (req, res) => {
+  const { new_password, confirm_password } = req.body;
+  const { accessToken } = req.cookies;
+
+  let decoded;
+  try {
+    decoded = jwt.verify(accessToken, customEnv.accessSecret);
+  } catch (error) {
+    throw new Unauthorized('Invalid or expired session token');
+  }
+
+  const user = await User.findById(decoded.id);
+  if (!user) {
+    throw new ResourceNotFound('User not found');
+  }
+
+  const hashedPassword = await bcrypt.hash(new_password, 12);
+  user.password = hashedPassword;
+  user.isEmailVerified = true;
+  await user.save();
+
+  res.clearCookie('accessToken');
+
+  sendJsonResponse(
+    res,
+    200,
+    'Password set successfully. You can now sign in.',
+    {
+      success: true,
+    }
+  );
+});
+
+export const userLogin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await User.findOne({ email }).select('+password');
+  if (!user) {
+    throw new ResourceNotFound('Invalid email or password');
+  }
+
+  if (!user.isEmailVerified) {
+    throw new Forbidden('Verify your email before sign in.');
+  }
+
+  const isPasswordMatch = await user.matchPassword(password);
+  if (!isPasswordMatch) {
+    throw new Unauthorized('Invalid email or passwordd');
+  }
+
+  const userId = user._id.toString();
+  const { accessToken, refreshToken } = generateTokensAndSetCookies(
+    res,
+    userId
+  );
+
+  const userResponse = user.toObject();
+  delete userResponse.password;
+
+  sendJsonResponse(
+    res,
+    200,
+    'Login successful',
+    {
+      user: userResponse,
+    },
+    accessToken,
+    refreshToken
   );
 });

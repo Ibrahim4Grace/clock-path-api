@@ -5,6 +5,21 @@ export const userRoutesDocs = {
         summary: 'Clock in the user for their shift',
         tags: ['User'],
         security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  longitude: { type: 'number', example: -73.935242 },
+                  latitude: { type: 'number', example: 40.73061 },
+                },
+                required: ['longitude', 'latitude']
+              }
+            }
+          }
+        },
         responses: {
           201: {
             description: 'Clocked in successfully.',
@@ -14,30 +29,35 @@ export const userRoutesDocs = {
                   type: 'object',
                   properties: {
                     success: { type: 'boolean', example: true },
-                    message: {
-                      type: 'string',
-                      example: 'Clocked in successfully',
-                    },
+                    message: { type: 'string', example: 'Clocked in successfully' },
                     data: {
                       type: 'object',
                       properties: {
                         user: { type: 'string', example: 'User ID' },
-                        clockInTime: {
-                          type: 'string',
-                          example: '2024-10-29T12:34:56.789Z',
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
+                        clockInTime: { type: 'string', example: '2024-10-29T12:34:56.789Z' },
+                        location: {
+                          type: 'object',
+                          properties: {
+                            type: { type: 'string', example: 'Point' },
+                            coordinates: {
+                              type: 'array',
+                              items: { type: 'number' },
+                              example: [-73.935242, 40.73061]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
-          400: { description: 'Already clocked in' },
-          404: { description: 'User not found' },
-          500: { description: 'Server error' },
-        },
-      },
+          400: { description: 'Already clocked in or invalid coordinates' },
+          404: { description: 'User or company not found' },
+          500: { description: 'Server error' }
+        }
+      }
     },
     '/api/v1/user/clock-out': {
       post: {

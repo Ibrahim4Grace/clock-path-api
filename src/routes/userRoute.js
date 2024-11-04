@@ -5,6 +5,7 @@ import {
   requestSchema,
   updateUserSchema,
   passwordSchema,
+  coordinatesSchema
 } from '../schema/index.js';
 import {
   validateData,
@@ -14,7 +15,13 @@ import {
 
 const userRoute = express.Router();
 
-userRoute.post('/clock-in', authMiddleware, userMiddleware, userCtrlr.clockIn);
+userRoute.post('/clock-in', 
+authMiddleware, 
+userMiddleware, 
+ validateData(coordinatesSchema),
+ userCtrlr.clockIn
+ );
+
 userRoute.post(
   '/clock-out',
   authMiddleware,

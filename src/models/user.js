@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     accountType: { type: String, default: 'User', immutable: true },
     work_days: {
       type: [String],
-      default: ['Mon', 'Fri'],
+      default: ['Mon', 'Sun'],
     },
     shift_duration: {
       start: { type: String, default: '08:00' },
@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema(
     },
     image: { imageId: String, imageUrl: String },
     isEmailVerified: { type: Boolean, default: false },
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Compnay',
+      required: true,
+    },
   },
   {
     timestamps: true,

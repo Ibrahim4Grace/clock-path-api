@@ -81,6 +81,37 @@ export const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
+export const verifyOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Invalid email address')
+    .transform(sanitizeInput),
+
+  otp: z.string().trim().min(1, 'otp is required').transform(sanitizeInput),
+});
+
+export const newPasswordSchema = z
+  .object({
+    new_password: z
+      .string()
+      .min(6, 'Password is required')
+      .transform(sanitizeInput),
+    confirm_password: z
+      .string()
+      .min(6, 'Confirm password is required')
+      .transform(sanitizeInput),
+  })
+  .superRefine(({ new_password, confirm_password }, ctx) => {
+    if (new_password !== confirm_password) {
+      ctx.addIssue({
+        path: ['confirm_password'],
+        message: 'Passwords must match',
+      });
+    }
+  });
+
 export const companySchema = z.object({
   name: z
     .string()
@@ -154,7 +185,7 @@ export const passwordSchema = z
       .transform(sanitizeInput),
     new_password: z
       .string()
-      .min(6, 'Confirm password is required')
+      .min(6, 'New password is required')
       .transform(sanitizeInput),
     confirm_password: z
       .string()
@@ -236,4 +267,15 @@ export const otpSchema = z.object({
     .transform(sanitizeInput),
 
   otp: z.string().trim().min(1, 'Otp is required').transform(sanitizeInput),
+});
+
+export const coordinatesSchema = z.object({
+  longitude: z
+    .number()
+    .min(-180, 'Longitude must be between -180 and 180')
+    .max(180, 'Longitude must be between -180 and 180'),
+  latitude: z
+    .number()
+    .min(-90, 'Latitude must be between -90 and 90')
+    .max(90, 'Latitude must be between -90 and 90'),
 });

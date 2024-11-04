@@ -83,7 +83,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/forget-password': {
+    '/api/v1/auth/password/forgot': {
       post: {
         summary: 'Request OTP for password reset',
         tags: ['Password Reset'],
@@ -123,7 +123,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/verify-forget-password-otp': {
+    '/api/v1/auth/password/verify-forget-password-otp': {
       post: {
         summary: 'Verify OTP for password reset',
         tags: ['Password Reset'],
@@ -166,7 +166,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/reset-password': {
+    '/api/v1/auth/password/reset': {
       post: {
         summary: 'Reset admin password',
         tags: ['Password Reset'],
@@ -210,7 +210,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/login': {
+    '/api/v1/auth/admin/login': {
       post: {
         summary: 'Login admin or user',
         tags: ['Authentication'],
@@ -281,7 +281,6 @@ export const authDocs = {
         },
       },
     },
-
     '/api/v1/auth/refresh-token': {
       post: {
         summary: 'Refresh access token',
@@ -307,6 +306,198 @@ export const authDocs = {
             description: 'No refresh token provided or invalid refresh token',
           },
           500: { description: 'Server error' },
+        },
+      },
+    },
+    '/api/v1/auth/password/verify-otp': {
+      post: {
+        summary: 'Verify OTP for new user password',
+        tags: ['Authentication', 'verify Passcode'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: {
+                    type: 'string',
+                    example: 'user@example.com',
+                  },
+                  otp: {
+                    type: 'string',
+                    example: '123456',
+                  },
+                },
+                required: ['email', 'otp'],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'OTP verified successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example:
+                        'OTP verified successfully. Please set your new password.',
+                    },
+                    accessToken: {
+                      type: 'string',
+                      example: 'eyJhbGciOiJIUzI1NiIsInR...',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Invalid OTP or user not found.',
+          },
+          401: {
+            description: 'Invalid OTP.',
+          },
+          404: {
+            description: 'User not found.',
+          },
+          500: {
+            description: 'Server error.',
+          },
+        },
+      },
+    },
+    '/api/v1/auth/password/new': {
+      post: {
+        summary: 'Set a new password for the user',
+        tags: ['Authentication', 'Password Reset'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  new_password: {
+                    type: 'string',
+                    example: 'newSecurePassword123',
+                  },
+                  confirm_password: {
+                    type: 'string',
+                    example: 'newSecurePassword123',
+                  },
+                },
+                required: ['new_password', 'confirm_password'],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Password set successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example:
+                        'Password set successfully. You can now sign in.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Passwords do not match or other validation error.',
+          },
+          401: {
+            description: 'Invalid or expired session token.',
+          },
+          404: {
+            description: 'User not found.',
+          },
+          500: {
+            description: 'Server error.',
+          },
+        },
+      },
+    },
+    '/api/v1/auth/user/login': {
+      post: {
+        summary: 'User login',
+        tags: ['Authentication'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: {
+                    type: 'string',
+                    example: 'user@example.com',
+                  },
+                  password: {
+                    type: 'string',
+                    example: 'SecurePassword123',
+                  },
+                },
+                required: ['email', 'password'],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Login successful.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Login successful',
+                    },
+                    user: {
+                      type: 'object',
+                      properties: {
+                        email: { type: 'string', example: 'user@example.com' },
+                        // Include other user properties as needed
+                      },
+                    },
+                    accessToken: {
+                      type: 'string',
+                      example: 'eyJhbGciOiJIUzI1NiIsInR...',
+                    },
+                    refreshToken: {
+                      type: 'string',
+                      example: 'eyJhbGciOiJIUzI1NiIsInR...',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Invalid email or password.',
+          },
+          403: {
+            description: 'Email not verified.',
+          },
+          500: {
+            description: 'Server error.',
+          },
         },
       },
     },

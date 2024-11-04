@@ -1,4 +1,4 @@
-import { cloudinary, frontendUrl } from '../config/index.js';
+import { cloudinary } from '../config/index.js';
 import fs from 'fs';
 import {
   User,
@@ -25,10 +25,10 @@ import {
   log,
   sendMail,
   parseEmails,
-  sendInvitationEmail,
-  generateInviteToken,
-  saveInviteToDatabase,
   formatTime,
+  sendConfirmationEmail,
+  generateOTP,
+  saveOTPToDatabase,
 } from '../utils/index.js';
 
 export const registerCompany = asyncHandler(async (req, res) => {
@@ -167,66 +167,131 @@ export const deleteUser = asyncHandler(async (req, res) => {
 export const inviteUser = asyncHandler(async (req, res) => {
   const { emails } = req.body;
   const admin = req.currentAdmin;
-  const adminName = req.currentAdmin.full_name;
+  const adminName = admin.full_name;
   const company = req.company;
 
-  const invites = [];
+  const emailArray = Array.isArray(emails) ? emails : [emails];
+  const totalInvites = emailArray.length;
+  const newUserCount = company.currentUserCount + totalInvites;
 
-  for (const email of Array.isArray(emails) ? emails : [emails]) {
-    const token = generateInviteToken();
+  const subscription = await Subscription.findOne({
+    admin: admin._id,
+    status: 'active',
+    paymentStatus: 'completed',
+  }).populate('plan');
 
-    const invitationLink = `${frontendUrl}/accept-invite?token=${token}`;
-    const declineLink = `${frontendUrl}/decline-invite?token=${token}`;
-
-    await saveInviteToDatabase(email, token, admin, adminName);
-
-    const emailContent = sendInvitationEmail(
-      email,
-      adminName,
-      invitationLink,
-      declineLink
-    );
-    await sendMail(emailContent);
-
-    invites.push({ email, status: 'pending' });
+  if (!subscription) {
+    throw new BadRequest('No active subscription found');
   }
 
-  // Update company user count
-  company.currentUserCount += invites.length;
+  if (newUserCount > subscription.plan.maxUsers) {
+    throw new BadRequest(
+      `Adding ${totalInvites} users would exceed your plan's limit of ${subscription.plan.maxUsers} users`
+    );
+  }
+
+  const results = [];
+  let successfulInvites = 0;
+
+  for (const email of emailArray) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new Conflict(`User with email ${email} already exists`);
+    }
+    const { otp, hashedOTP } = await generateOTP();
+    const newUser = await User.create({
+      email,
+      password: hashedOTP,
+      invitedBy: adminName,
+      isEmailVerified: false,
+      companyId: company._id,
+    });
+
+    // Save the OTP to the database
+    await saveOTPToDatabase(newUser._id, otp, hashedOTP);
+
+    const emailContent = sendConfirmationEmail(newUser, otp);
+    await sendMail(emailContent);
+
+    results.push({
+      email,
+      status: 'created',
+      userId: newUser._id,
+    });
+    successfulInvites += 1;
+  }
+
+  company.currentUserCount += successfulInvites;
   await company.save();
 
-  sendJsonResponse(res, 200, 'Invitation(s) sent successfully.', invites);
+  sendJsonResponse(res, 200, 'User(s) invited successfully', {
+    success: true,
+    results,
+  });
 });
 
 export const inviteBulkUsers = asyncHandler(async (req, res) => {
   const emails = await parseEmails(req.file.path);
   const admin = req.currentAdmin;
-  const adminName = req.currentAdmin.full_name;
+  const adminName = admin.full_name;
+  const company = req.company;
 
-  const invites = [];
+  const totalInvites = emails.length;
+  const newUserCount = company.currentUserCount + totalInvites;
 
-  for (const email of emails) {
-    const token = generateInviteToken();
-    const invitationLink = `${frontendUrl}/accept-invite?token=${token}`;
-    const declineLink = `${frontendUrl}/decline-invite?token=${token}`;
+  const subscription = await Subscription.findOne({
+    admin: admin._id,
+    status: 'active',
+    paymentStatus: 'completed',
+  }).populate('plan');
 
-    await saveInviteToDatabase(email, token, admin, adminName);
-
-    const emailContent = sendInvitationEmail(
-      email,
-      adminName,
-      invitationLink,
-      declineLink
-    );
-    await sendMail(emailContent);
-
-    invites.push({ email, status: 'pending' });
+  if (!subscription) {
+    throw new BadRequest('No active subscription found');
   }
 
-  company.currentUserCount += invites.length;
+  if (newUserCount > subscription.plan.maxUsers) {
+    throw new BadRequest(
+      `Adding ${totalInvites} users would exceed your plan's limit of ${subscription.plan.maxUsers} users`
+    );
+  }
+
+  const results = [];
+  let successfulInvites = 0;
+
+  for (const email of emails) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new Conflict(`User with email ${email} already exists`);
+    }
+
+    const { otp, hashedOTP } = await generateOTP();
+
+    const newUser = await User.create({
+      email,
+      password: hashedOTP,
+      invitedBy: adminName,
+      isEmailVerified: false,
+      companyId: company._id,
+    });
+
+    const emailContent = sendConfirmationEmail(newUser, otp);
+    await sendMail(emailContent);
+
+    results.push({
+      email,
+      status: 'created',
+      userId: newUser._id,
+    });
+    successfulInvites += 1;
+  }
+
+  company.currentUserCount += successfulInvites;
   await company.save();
 
-  sendJsonResponse(res, 200, 'Bulk invitations sent successfully.', invites);
+  sendJsonResponse(res, 200, 'Bulk invitations sent successfully', {
+    success: true,
+    results,
+  });
 });
 
 export const getAllClockInRecords = asyncHandler(async (req, res) => {

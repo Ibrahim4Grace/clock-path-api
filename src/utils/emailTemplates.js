@@ -68,26 +68,6 @@ export const loginNotification = (account) => ({
         The Clock Path Team</p>`,
 });
 
-export const sendInvitationEmail = (
-  email,
-  adminName,
-  invitationLink,
-  declineLink
-) => ({
-  from: customEnv.nodemailerEmail,
-  to: email,
-  subject: `${adminName} has invited you to join Clockpath!`,
-  html: `
-    <p>${adminName} has invited you to join Clockpath.</p>
-    <p>Click the link below to accept the invitation:</p>
-    <a href="${invitationLink}">${invitationLink}</a>
-
-    <p>If you would like to decline this invitation, please click <a href="${declineLink}">here</a>.</p>
-    <p>This invitation will expire in 7 days.</p>
-    <p>Best regards,<br>The Clockpath Team</p>
-  `,
-});
-
 export const sendConfirmationEmail = (newUser, otp) => ({
   from: customEnv.nodemailerEmail,
   to: newUser.email,

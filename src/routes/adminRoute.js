@@ -79,7 +79,6 @@ adminRoute.post(
   adminMiddleware,
   cvsUpload.single('csvFile'),
   validateData(inviteSchema),
-  checkUserLimit,
   adminCtrlr.inviteBulkUsers
 );
 

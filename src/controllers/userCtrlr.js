@@ -1,5 +1,5 @@
 import { cloudinary } from '../config/index.js';
-import { User, Request, ClockIn } from '../models/index.js';
+import { User, Request, ClockIn, Company } from '../models/index.js';
 import { sendJsonResponse } from '../helper/index.js';
 import {
   asyncHandler,
@@ -12,12 +12,52 @@ import { sendMail, formatTime, updatePassword } from '../utils/index.js';
 
 export const clockIn = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
+  const { longitude, latitude } = req.body;
+
+  // Validate coordinate ranges
+  if (longitude < -180 || longitude > 180) {
+    throw new BadRequest('Invalid longitude value');
+  }
+  if (latitude < -90 || latitude > 90) {
+    throw new BadRequest('Invalid latitude value');
+  }
 
   const user = await User.findById(userId);
   if (!user) {
     throw new ResourceNotFound('User not found');
   }
 
+  // Get user's company and check if within radius
+  const company = await Company.findById(user.companyId);
+  if (!company) {
+    throw new ResourceNotFound('Company not found');
+  }
+
+  // Create user location object for distance checking
+  const userLocation = {
+    type: 'Point',
+    coordinates: [longitude, latitude],
+  };
+
+  const isWithinRadius = await Company.findOne({
+    _id: company._id,
+    location: {
+      $near: {
+        $geometry: userLocation,
+        $maxDistance: company.radius || 100,
+      },
+    },
+  });
+
+  if (!isWithinRadius) {
+    throw new BadRequest(
+      `You must be within ${company.radius || 100} meters of ${
+        company.name
+      } to clock in`
+    );
+  }
+
+  // Check for existing open shift
   const openShift = await ClockIn.findOne({ user: userId, clockOutTime: null });
   if (openShift) {
     throw new BadRequest('Already clocked in');
@@ -26,6 +66,7 @@ export const clockIn = asyncHandler(async (req, res) => {
   const newClockIn = await ClockIn.create({
     user: userId,
     clockInTime: new Date(),
+    location: userLocation,
   });
 
   sendJsonResponse(res, 201, 'Clocked in successfully', newClockIn);

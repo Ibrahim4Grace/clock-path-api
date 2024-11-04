@@ -11,7 +11,7 @@ const extractUserLimit = (features) => {
 export const checkUserLimit = asyncHandler(async (req, res, next) => {
   const admin = req.currentAdmin;
 
-  // Get company and plan details
+
   const company = await Company.findOne({ adminId: admin._id }).populate(
     'planId'
   );
