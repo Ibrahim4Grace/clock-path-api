@@ -5,6 +5,9 @@ const sanitizeInput = (value) => {
   return validator.trim(validator.escape(value));
 };
 
+const passwordRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+
 export const registerSchema = z
   .object({
     full_name: z
@@ -48,28 +51,6 @@ export const forgetPswdSchema = z.object({
     .transform(sanitizeInput),
 });
 
-export const resetPswdSchema = z
-  .object({
-    newPassword: z
-      .string()
-      .trim()
-      .min(6, 'New password is required')
-      .transform(sanitizeInput),
-
-    confirm_newPassword: z
-      .string()
-      .min(6, 'Confirm password is required')
-      .transform(sanitizeInput),
-  })
-  .superRefine(({ newPassword, confirm_newPassword }, ctx) => {
-    if (newPassword !== confirm_newPassword) {
-      ctx.addIssue({
-        path: ['confirm_newPassword'],
-        message: 'Passwords must match',
-      });
-    }
-  });
-
 export const loginSchema = z.object({
   email: z
     .string()
@@ -96,11 +77,15 @@ export const newPasswordSchema = z
   .object({
     new_password: z
       .string()
-      .min(6, 'Password is required')
+      .min(8, 'Password must be at least 8 characters long')
       .transform(sanitizeInput),
     confirm_password: z
       .string()
-      .min(6, 'Confirm password is required')
+      .min(8, 'Confirm password is required')
+      .regex(
+        passwordRegex,
+        'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character'
+      )
       .transform(sanitizeInput),
   })
   .superRefine(({ new_password, confirm_password }, ctx) => {
@@ -177,19 +162,58 @@ export const updateUserSchema = z.object({
     .optional(),
 });
 
+export const workScheduleSchema = z.object({
+  work_days: z
+    .array(
+      z.object({
+        day: z.enum([
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday',
+        ]),
+        shift: z.object({
+          start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+            message: 'Invalid start time',
+          }),
+          end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+            message: 'Invalid end time',
+          }),
+        }),
+      })
+    )
+    .min(1), // Require at least one work day
+  // Other user profile fields
+  full_name: z.string().optional(),
+  role: z.string().optional(),
+  image: z
+    .object({
+      imageId: z.string(),
+      imageUrl: z.string().url(),
+    })
+    .optional(),
+});
+
 export const passwordSchema = z
   .object({
     current_password: z
       .string()
-      .min(6, 'Password is required')
+      .min(8, 'Password must be at least 8 characters long')
       .transform(sanitizeInput),
     new_password: z
       .string()
       .min(6, 'New password is required')
+      .regex(
+        passwordRegex,
+        'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character'
+      )
       .transform(sanitizeInput),
     confirm_password: z
       .string()
-      .min(6, 'Confirm password is required')
+      .min(8, 'Confirm password is required')
       .transform(sanitizeInput),
   })
   .superRefine(({ new_password, confirm_password }, ctx) => {

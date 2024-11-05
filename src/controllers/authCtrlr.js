@@ -16,14 +16,15 @@ import {
   generateOTP,
   saveOTPToDatabase,
   sendOTPByEmail,
-  forgetPasswordMsg,
-  sendPasswordResetEmail,
   loginNotification,
   generateTokensAndSetCookies,
   welcomeEmail,
+  userPasswordService,
+  adminPasswordService,
+  passwordChangeNotification,
 } from '../utils/index.js';
 
-export const registerUser = asyncHandler(async (req, res) => {
+export const registerAdmin = asyncHandler(async (req, res) => {
   const { full_name, email, password } = req.body;
 
   const existingAdmin = await Admin.findOne({ email });
@@ -79,85 +80,30 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   sendJsonResponse(res, 200, 'Email Verified successfully.');
 });
 
-export const forgotPassword = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-
-  const admin = await Admin.findOne({ email });
-  if (!admin) {
-    throw new ResourceNotFound('Email not found');
-  }
-
-  await OTP.deleteMany({ userOrAdmin: admin._id });
-
-  const { otp, hashedOTP } = await generateOTP();
-  await saveOTPToDatabase(admin._id, otp, hashedOTP);
-
-  const emailContent = forgetPasswordMsg(admin, otp);
-  await sendMail(emailContent);
-
-  sendJsonResponse(res, 200, 'Your 6-digit Verification Code has been sent.');
+export const adminForgotPassword = asyncHandler(async (req, res) => {
+  const message = await adminPasswordService.handleForgotPassword(
+    req.body.email
+  );
+  sendJsonResponse(res, 200, message);
 });
 
-export const verifyForgetPwdOtp = asyncHandler(async (req, res) => {
-  const { otp } = req.body;
-
-  const existingOtp = await OTP.findOne({
-    otp: { $exists: true },
-    expiresAt: { $gt: new Date() },
-  });
-
-  if (!existingOtp) {
-    throw new BadRequest('Invalid or expired OTP');
-  }
-
-  const userId = existingOtp.userOrAdmin;
-  const admin = await Admin.findById(userId);
-  if (!admin) {
-    throw new ResourceNotFound('Admin not found!');
-  }
-
-  const isOTPValid = await bcrypt.compare(otp, existingOtp.otp);
-  if (!isOTPValid || new Date() > existingOtp.expiresAt) {
-    throw new BadRequest('Invalid or expired OTP');
-  }
-
-  await OTP.deleteOne({ _id: existingOtp._id });
-
-  const resetToken = jwt.sign(
-    { userId: existingOtp.userOrAdmin },
-    customEnv.jwtSecret,
-    { expiresIn: customEnv.jwtExpiry }
-  );
-
+export const adminVerifyPasswordOtp = asyncHandler(async (req, res) => {
+  const resetToken = await adminPasswordService.handleVerifyOTP(req.body.otp);
   sendJsonResponse(
     res,
     200,
     'OTP verified successfully. You can now reset your password.',
-    resetToken
+    { resetToken }
   );
 });
 
-export const resetPassword = asyncHandler(async (req, res) => {
-  const { newPassword, confirm_newPassword } = req.body;
-
+export const adminResetPassword = asyncHandler(async (req, res) => {
   const resetToken = req.headers.authorization?.split(' ')[1];
-
-  if (!resetToken) throw new BadRequest('Reset token is missing');
-
-  const decoded = jwt.verify(resetToken, customEnv.jwtSecret);
-  const userId = decoded.userId;
-  const admin = await Admin.findById(userId);
-  if (!admin) throw new ResourceNotFound('Admin not found');
-
-  admin.password = newPassword;
-  await admin.save();
-
-  await OTP.deleteOne({ admin: userId });
-
-  const emailContent = sendPasswordResetEmail(admin);
-  await sendMail(emailContent);
-
-  sendJsonResponse(res, 200, 'Password reset successfully');
+  const message = await adminPasswordService.handleResetPassword(
+    resetToken,
+    req.body.newPassword
+  );
+  sendJsonResponse(res, 200, message);
 });
 
 export const adminLogin = asyncHandler(async (req, res) => {
@@ -233,7 +179,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   );
 });
 
-export const verifyPasswordOtp = asyncHandler(async (req, res) => {
+export const userVerifyPasscodeOtp = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
 
   const user = await User.findOne({ email });
@@ -267,9 +213,9 @@ export const verifyPasswordOtp = asyncHandler(async (req, res) => {
   );
 });
 
-export const setNewPassword = asyncHandler(async (req, res) => {
+export const userSetNewPassword = asyncHandler(async (req, res) => {
   const { new_password, confirm_password } = req.body;
-  const { accessToken } = req.cookies;
+  const accessToken = req.headers.authorization?.split(' ')[1];
 
   let decoded;
   try {
@@ -283,12 +229,14 @@ export const setNewPassword = asyncHandler(async (req, res) => {
     throw new ResourceNotFound('User not found');
   }
 
-  const hashedPassword = await bcrypt.hash(new_password, 12);
-  user.password = hashedPassword;
+  user.password = new_password;
   user.isEmailVerified = true;
   await user.save();
 
   res.clearCookie('accessToken');
+
+  const emailContent = passwordChangeNotification(user);
+  await sendMail(emailContent);
 
   sendJsonResponse(
     res,
@@ -336,4 +284,30 @@ export const userLogin = asyncHandler(async (req, res) => {
     accessToken,
     refreshToken
   );
+});
+
+export const userForgotPassword = asyncHandler(async (req, res) => {
+  const message = await userPasswordService.handleForgotPassword(
+    req.body.email
+  );
+  sendJsonResponse(res, 200, message);
+});
+
+export const userVerifyPasswordOtp = asyncHandler(async (req, res) => {
+  const resetToken = await userPasswordService.handleVerifyOTP(req.body.otp);
+  sendJsonResponse(
+    res,
+    200,
+    'OTP verified successfully. You can now reset your password.',
+    { resetToken }
+  );
+});
+
+export const userResetPassword = asyncHandler(async (req, res) => {
+  const resetToken = req.headers.authorization?.split(' ')[1];
+  const message = await userPasswordService.handleResetPassword(
+    resetToken,
+    req.body.new_password
+  );
+  sendJsonResponse(res, 200, message);
 });

@@ -25,12 +25,12 @@ export const welcomeEmail = (admin) => ({
         The Clock Path Team</p>`,
 });
 
-export const forgetPasswordMsg = (admin, otp, otpExpiryHours = 24) => ({
+export const forgetPasswordMsg = (user, otp, otpExpiryHours = 24) => ({
   from: customEnv.nodemailerEmail,
-  to: admin.email,
+  to: user.email,
   subject: 'Password Reset Request',
   html: `
-  <p>Greetings ${admin.full_name} from Clock Path Services,</p>
+  <p>Greetings ${user.full_name || 'User'}  from Clock Path Services,</p>
   <p>We received a request to reset the password for the Clock Path account associated with this e-mail address.</p>
 
       <p>Use the 6-digit Code provided below to reset your password:</p>
@@ -41,16 +41,22 @@ export const forgetPasswordMsg = (admin, otp, otpExpiryHours = 24) => ({
       The Clock Path Team</p>`,
 });
 
-export const sendPasswordResetEmail = (admin) => ({
+export const sendPasswordResetEmail = (user) => ({
   from: customEnv.nodemailerEmail,
-  to: admin.email,
+  to: user.email,
   subject: 'Password Reset Confirmation',
   html: `
-            <p>Hello ${admin.full_name},</p>
+            <p>Hello ${user.full_name || 'User'},</p>
             <p>Your password has been successfully reset. If you did not perform this action, please contact our support team immediately.</p>
 
             <p>Best regards,<br>
             The Clock Path Team</p>`,
+});
+
+export const passwordChangeNotification = (user) => ({
+  to: user.email,
+  subject: 'Your Password Has Been Changed',
+  text: `Hello User,\n\nThis is a confirmation that the password for your account has just been changed. If you did not request this change, please contact our support team immediately.\n\nBest regards,\nThe Clock Path Team`,
 });
 
 export const loginNotification = (account) => ({

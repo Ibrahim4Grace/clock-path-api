@@ -1,27 +1,46 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+const workDaySchema = new mongoose.Schema({
+  day: {
+    type: String,
+    required: true,
+    enum: [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ],
+  },
+  shift: {
+    start: {
+      type: String,
+      required: true,
+    },
+    end: {
+      type: String,
+      required: true,
+    },
+  },
+});
+
 const userSchema = new mongoose.Schema(
   {
     full_name: { type: String, trim: true },
-    email: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
     password: { type: String, select: false },
     invitedBy: { type: String, required: true, trim: true },
     role: { type: String, trim: true },
     accountType: { type: String, default: 'User', immutable: true },
-    work_days: {
-      type: [String],
-      default: ['Mon', 'Sun'],
-    },
-    shift_duration: {
-      start: { type: String, default: '08:00' },
-      end: { type: String, default: '05:00' },
-    },
+    work_days: [workDaySchema],
     image: { imageId: String, imageUrl: String },
     isEmailVerified: { type: Boolean, default: false },
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Compnay',
+      ref: 'Company',
       required: true,
     },
   },

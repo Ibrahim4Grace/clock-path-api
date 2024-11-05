@@ -10,6 +10,139 @@ import {
 } from '../middlewares/index.js';
 import { sendMail, formatTime, updatePassword } from '../utils/index.js';
 
+export const createProfile = asyncHandler(async (req, res) => {
+  const userId = req.currentUser;
+  const { work_days, full_name, role } = req.body;
+  const file = req.file;
+
+  const updateFields = {};
+
+  if (work_days) {
+    updateFields.work_days = work_days.map((day) => ({
+      day: day.day,
+      shift: {
+        start: day.shift.start,
+        end: day.shift.end,
+      },
+    }));
+  }
+
+  if (full_name) updateFields.full_name = full_name;
+  if (role) updateFields.role = role;
+
+  if (file) {
+    const existingUser = await User.findById(userId);
+
+    if (existingUser.image && existingUser.image.imageId) {
+      try {
+        await cloudinary.uploader.destroy(existingUser.image.imageId);
+      } catch (error) {
+        console.error('Error deleting old image:', error);
+      }
+    }
+
+    try {
+      const cloudinaryResult = await cloudinary.uploader.upload(file.path);
+      updateFields.image = {
+        imageId: cloudinaryResult.public_id,
+        imageUrl: cloudinaryResult.secure_url,
+      };
+    } catch (error) {
+      throw new Error('Failed to upload image: ' + error.message);
+    }
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!updatedUser) {
+    throw new ResourceNotFound('User not found');
+  }
+
+  sendJsonResponse(res, 201, 'Profile created successfully', {
+    data: updatedUser,
+  });
+});
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const userId = req.currentUser;
+  const { work_days, full_name, role, email } = req.body;
+  const file = req.file;
+  const updateFields = {};
+
+  if (work_days) {
+    updateFields.work_days = work_days.map((day) => ({
+      day: day.day,
+      shift: {
+        start: day.shift.start,
+        end: day.shift.end,
+      },
+    }));
+  }
+
+  if (full_name) updateFields.full_name = full_name;
+  if (role) updateFields.role = role;
+  if (email) updateFields.email = email;
+
+  if (file) {
+    const existingUser = await User.findById(userId);
+
+    if (existingUser.image && existingUser.image.imageId) {
+      try {
+        await cloudinary.uploader.destroy(existingUser.image.imageId);
+      } catch (error) {
+        console.error('Error deleting old image:', error);
+      }
+    }
+
+    try {
+      const cloudinaryResult = await cloudinary.uploader.upload(file.path);
+      updateFields.image = {
+        imageId: cloudinaryResult.public_id,
+        imageUrl: cloudinaryResult.secure_url,
+      };
+    } catch (error) {
+      throw new Error('Failed to upload image: ' + error.message);
+    }
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!updatedUser) {
+    throw new ResourceNotFound('User not found');
+  }
+
+  sendJsonResponse(res, 200, 'Profile updated successfully', {
+    data: updatedUser,
+  });
+});
+
+export const getWorkSchedule = asyncHandler(async (req, res) => {
+  const userId = req.currentUser;
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new ResourceNotFound('User not found');
+  }
+
+  const workSchedule = {
+    work_days: user.work_days.map((day) => ({
+      day: day.day,
+      shift: {
+        start: day.shift?.start || '00:00',
+        end: day.shift?.end || '00:00',
+      },
+    })),
+  };
+
+  sendJsonResponse(res, 200, 'User work days', { data: workSchedule });
+});
+
 export const clockIn = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
   const { longitude, latitude } = req.body;
@@ -134,53 +267,6 @@ export const userRequest = asyncHandler(async (req, res) => {
   });
 
   sendJsonResponse(res, 201, 'Request created successfully', newRequest);
-});
-
-export const editProfile = asyncHandler(async (req, res) => {
-  const userId = req.currentUser;
-  const { email, full_name, role, work_days, shift_duration } = req.body;
-  const file = req.file;
-
-  const updateFields = {
-    email,
-    full_name,
-    role,
-    work_days,
-    shift_duration,
-  };
-
-  Object.keys(updateFields).forEach((key) => {
-    if (updateFields[key] === undefined) {
-      delete updateFields[key];
-    }
-  });
-
-  if (file) {
-    const cloudinaryResult = await cloudinary.uploader.upload(file.path);
-    updateFields.image = {
-      imageId: cloudinaryResult.public_id,
-      imageUrl: cloudinaryResult.secure_url,
-    };
-  }
-
-  const user = await User.findByIdAndUpdate(userId, updateFields, {
-    new: true,
-  });
-  if (!user) {
-    throw new ResourceNotFound('User not found or update failed');
-  }
-
-  const formattedUser = {
-    ...user.toObject(),
-    work_days: user.work_days ? user.work_days.join(' - ') : '',
-    shift_duration: user.shift_duration
-      ? `${formatTime(user.shift_duration.start)} - ${formatTime(
-          user.shift_duration.end
-        )}`
-      : '',
-  };
-
-  sendJsonResponse(res, 200, 'User updated successfully', formattedUser);
 });
 
 export const managePasswords = asyncHandler(async (req, res) => {

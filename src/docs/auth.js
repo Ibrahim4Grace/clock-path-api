@@ -1,6 +1,6 @@
 export const authDocs = {
   paths: {
-    '/api/v1/auth/register': {
+    '/api/v1/auth/admin/register': {
       post: {
         summary: 'Register a new admin',
         tags: ['Authentication'],
@@ -43,7 +43,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/verify-otp': {
+    '/api/v1/auth/admin/verify-otp': {
       post: {
         summary: 'Verify OTP for registration',
         tags: ['Authentication'],
@@ -83,7 +83,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/password/forgot': {
+    '/api/v1/auth/admin/password/forgot': {
       post: {
         summary: 'Request OTP for password reset',
         tags: ['Password Reset'],
@@ -123,7 +123,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/password/verify-forget-password-otp': {
+    '/api/v1/auth/admin/password/verify-otp': {
       post: {
         summary: 'Verify OTP for password reset',
         tags: ['Password Reset'],
@@ -166,7 +166,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/password/reset': {
+    '/api/v1/auth/admin/password/reset': {
       post: {
         summary: 'Reset admin password',
         tags: ['Password Reset'],
@@ -177,10 +177,16 @@ export const authDocs = {
               schema: {
                 type: 'object',
                 properties: {
-                  newPassword: { type: 'string', example: 'NewPassword123!' },
-                  confirm_newPassword: {
+                  new_password: {
                     type: 'string',
                     example: 'NewPassword123!',
+                    description:
+                      'Must include at least one uppercase letter, one lowercase letter, one number, and one special character',
+                  },
+                  confirm_password: {
+                    type: 'string',
+                    example: 'NewPassword123!',
+                    description: 'Must match the new_password field',
                   },
                 },
               },
@@ -281,7 +287,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/refresh-token': {
+    '/api/v1/auth/token/refresh': {
       post: {
         summary: 'Refresh access token',
         tags: ['Authentication'],
@@ -309,7 +315,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/password/verify-otp': {
+    '/api/v1/auth/user/invite/verify-otp': {
       post: {
         summary: 'Verify OTP for new user password',
         tags: ['Authentication', 'verify Passcode'],
@@ -372,7 +378,7 @@ export const authDocs = {
         },
       },
     },
-    '/api/v1/auth/password/new': {
+    '/api/v1/auth/user/password/new': {
       post: {
         summary: 'Set a new password for the user',
         tags: ['Authentication', 'Password Reset'],
@@ -498,6 +504,139 @@ export const authDocs = {
           500: {
             description: 'Server error.',
           },
+        },
+      },
+    },
+    '/api/v1/auth/user/password/forgot': {
+      post: {
+        summary: 'Request OTP for password reset',
+        tags: ['Password Reset'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  email: { type: 'string', example: 'john.doe@example.com' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Verification code sent.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Your 6-digit Verification Code has been sent.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'Email not found' },
+          500: { description: 'Server error' },
+        },
+      },
+    },
+    '/api/v1/auth/user/password/verify-otp': {
+      post: {
+        summary: 'Verify OTP for password reset',
+        tags: ['Password Reset'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  otp: { type: 'string', example: '123456' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description:
+              'OTP verified successfully. You can now reset your password.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example:
+                        'OTP verified successfully. You can now reset your password.',
+                    },
+                    resetToken: { type: 'string', example: 'JWT_RESET_TOKEN' },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Invalid or expired OTP' },
+          500: { description: 'Server error' },
+        },
+      },
+    },
+    '/api/v1/auth/user/password/reset': {
+      post: {
+        summary: 'Reset user password',
+        tags: ['Password Reset'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  new_password: {
+                    type: 'string',
+                    example: 'NewPassword123!',
+                    description:
+                      'Must include at least one uppercase letter, one lowercase letter, one number, and one special character',
+                  },
+                  confirm_password: {
+                    type: 'string',
+                    example: 'NewPassword123!',
+                    description: 'Must match the new_password field',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Password reset successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Password reset successfully.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Reset token is missing or invalid' },
+          500: { description: 'Server error' },
         },
       },
     },
