@@ -97,19 +97,6 @@ export const newPasswordSchema = z
     }
   });
 
-export const companySchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Company name is required')
-    .transform(sanitizeInput),
-
-  address: z
-    .string()
-    .min(1, 'Company address must be at least 6 characters')
-    .transform(sanitizeInput),
-});
-
 export const inviteSchema = z.object({
   emails: z
     .array(z.string())
@@ -302,4 +289,20 @@ export const coordinatesSchema = z.object({
     .number()
     .min(-90, 'Latitude must be between -90 and 90')
     .max(90, 'Latitude must be between -90 and 90'),
+});
+
+const addressSchema = z.object({
+  street: z.string().nonempty(),
+  city: z.string().nonempty(),
+  state: z.string().nonempty(),
+  country: z.string().length(2),
+  zipcode: z.string().nonempty(),
+});
+
+export const companyLocationSchema = z.object({
+  name: z.string().trim().min(1, 'Company name is required'),
+  longitude: z.number().min(-180).max(180),
+  latitude: z.number().min(-90).max(90),
+  radius: z.number().min(1).max(1000).default(20),
+  address: z.array(addressSchema).length(1),
 });

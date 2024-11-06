@@ -1,6 +1,8 @@
 import express from 'express';
 import * as userCtrlr from '../controllers/index.js';
 import { userImage } from '../config/index.js';
+import { paginatedResults } from '../utils/index.js';
+import { ClockIn, Request } from '../models/index.js';
 import {
   requestSchema,
   workScheduleSchema,
@@ -52,7 +54,16 @@ userRoute.post(
   '/clock-out',
   authMiddleware,
   userMiddleware,
+  validateData(coordinatesSchema),
   userCtrlr.clockOut
+);
+
+userRoute.get(
+  '/recent-activity',
+  authMiddleware,
+  userMiddleware,
+  paginatedResults(ClockIn),
+  userCtrlr.getRecentActivity
 );
 
 userRoute.post(
@@ -61,6 +72,14 @@ userRoute.post(
   userMiddleware,
   validateData(requestSchema),
   userCtrlr.userRequest
+);
+
+userRoute.get(
+  '/requests',
+  authMiddleware,
+  userMiddleware,
+  paginatedResults(Request),
+  userCtrlr.userRequests
 );
 
 userRoute.post(

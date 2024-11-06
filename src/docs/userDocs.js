@@ -31,7 +31,7 @@ export const userRoutesDocs = {
                     success: { type: 'boolean', example: true },
                     message: {
                       type: 'string',
-                      example: 'Clocked in successfully',
+                      example: 'Clocked in successfully (Late arrival)',
                     },
                     data: {
                       type: 'object',
@@ -52,6 +52,16 @@ export const userRoutesDocs = {
                             },
                           },
                         },
+                        scheduledStart: {
+                          type: 'string',
+                          example: '2024-10-29T09:00:00.000Z',
+                        },
+                        scheduledEnd: {
+                          type: 'string',
+                          example: '2024-10-29T17:00:00.000Z',
+                        },
+                        isLate: { type: 'boolean', example: true },
+                        missedShift: { type: 'boolean', example: false },
                       },
                     },
                   },
@@ -70,6 +80,21 @@ export const userRoutesDocs = {
         summary: 'Clock out the user from their shift',
         tags: ['User'],
         security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  longitude: { type: 'number', example: -73.935242 },
+                  latitude: { type: 'number', example: 40.73061 },
+                },
+                required: ['longitude', 'latitude'],
+              },
+            },
+          },
+        },
         responses: {
           200: {
             description: 'Clocked out successfully.',
@@ -81,7 +106,7 @@ export const userRoutesDocs = {
                     success: { type: 'boolean', example: true },
                     message: {
                       type: 'string',
-                      example: 'Clocked out successfully',
+                      example: 'Clocked out successfully (Early departure)',
                     },
                     data: {
                       type: 'object',
@@ -93,8 +118,10 @@ export const userRoutesDocs = {
                         },
                         clockOutTime: {
                           type: 'string',
-                          example: '2024-10-29T13:34:56.789Z',
+                          example: '2024-10-29T17:34:56.789Z',
                         },
+                        hoursWorked: { type: 'number', example: 8.5 },
+                        isEarlyDeparture: { type: 'boolean', example: true },
                         missedShift: { type: 'boolean', example: false },
                       },
                     },
@@ -104,6 +131,65 @@ export const userRoutesDocs = {
             },
           },
           404: { description: 'No active session to clock out' },
+          500: { description: 'Server error' },
+        },
+      },
+    },
+    '/api/v1/user/recent-activity': {
+      get: {
+        summary: 'Get the users recent clock-in and clock-out activity',
+        tags: ['User'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Recent activity retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Recent activity retrieved successfully',
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        results: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              date: { type: 'string', example: '2024-10-29' },
+                              clockInTime: {
+                                type: 'string',
+                                example: '12:34 PM',
+                              },
+                              clockOutTime: {
+                                type: 'string',
+                                example: '05:34 PM',
+                              },
+                              status: { type: 'string', example: 'On Time' },
+                              hoursWorked: { type: 'number', example: 8.5 },
+                            },
+                          },
+                        },
+                        pagination: {
+                          type: 'object',
+                          properties: {
+                            currentPage: { type: 'number', example: 1 },
+                            totalPages: { type: 'number', example: 3 },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: { description: 'User not found or no activity available' },
           500: { description: 'Server error' },
         },
       },
@@ -168,41 +254,36 @@ export const userRoutesDocs = {
         },
       },
     },
-    '/api/v1/user/edit-profile': {
-      post: {
-        summary: 'Edit user profile',
-        tags: ['User'],
+    '/api/v1/user/requests': {
+      get: {
+        summary: 'Get all user requests',
+        tags: ['User Requests'],
         security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  email: { type: 'string', example: 'john.doe@example.com' },
-                  full_name: { type: 'string', example: 'John Doe' },
-                  role: { type: 'string', example: 'Admin' },
-                  work_days: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    example: ['Monday', 'Tuesday'],
-                  },
-                  shift_duration: {
-                    type: 'object',
-                    properties: {
-                      start: { type: 'string', example: '09:00' },
-                      end: { type: 'string', example: '17:00' },
-                    },
-                  },
-                },
-              },
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            description: 'Page number for pagination',
+            required: false,
+            schema: {
+              type: 'integer',
+              example: 1,
             },
           },
-        },
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Number of items per page for pagination',
+            required: false,
+            schema: {
+              type: 'integer',
+              example: 10,
+            },
+          },
+        ],
         responses: {
           200: {
-            description: 'User updated successfully.',
+            description: 'User requests retrieved successfully.',
             content: {
               'application/json': {
                 schema: {
@@ -211,17 +292,36 @@ export const userRoutesDocs = {
                     success: { type: 'boolean', example: true },
                     message: {
                       type: 'string',
-                      example: 'User updated successfully',
+                      example: 'User requests retrieved successfully',
                     },
                     data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          requestType: { type: 'string', example: 'vacation' },
+                          reason: { type: 'string', example: 'Personal' },
+                          note: { type: 'string', example: 'Family event' },
+                          startDate: {
+                            type: 'string',
+                            example: '2024-11-07T10:00:00Z',
+                          },
+                          endDate: {
+                            type: 'string',
+                            example: '2024-11-08T10:00:00Z',
+                          },
+                          createdAt: {
+                            type: 'string',
+                            example: '2024-11-01T12:00:00Z',
+                          },
+                        },
+                      },
+                    },
+                    pagination: {
                       type: 'object',
                       properties: {
-                        userId: { type: 'string', example: 'User ID' },
-                        full_name: { type: 'string', example: 'John Doe' },
-                        email: {
-                          type: 'string',
-                          example: 'john.doe@example.com',
-                        },
+                        currentPage: { type: 'integer', example: 1 },
+                        totalPages: { type: 'integer', example: 5 },
                       },
                     },
                   },
@@ -229,8 +329,27 @@ export const userRoutesDocs = {
               },
             },
           },
-          404: { description: 'User not found or update failed' },
-          500: { description: 'Server error' },
+          404: {
+            description:
+              'No requests found for the user or paginated results not found',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'No requests found for this user.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          500: {
+            description: 'Server error',
+          },
         },
       },
     },
@@ -364,7 +483,7 @@ export const userProfileDocs = {
                   },
                   full_name: { type: 'string', example: 'John Doe' },
                   role: { type: 'string', example: 'Manager' },
-                  file: { type: 'string', format: 'binary' },
+                  image: { type: 'string', format: 'binary' },
                 },
               },
             },

@@ -7,7 +7,7 @@ import {
   inviteSchema,
   updateUserSchema,
   passwordSchema,
-  companySchema,
+  companyLocationSchema,
 } from '../schema/index.js';
 import {
   validateData,
@@ -19,11 +19,26 @@ import {
 const adminRoute = express.Router();
 
 adminRoute.post(
-  '/register-company',
+  '/company/register',
   authMiddleware,
   adminMiddleware,
-  validateData(companySchema),
+  validateData(companyLocationSchema),
   adminCtrlr.registerCompany
+);
+
+adminRoute.put(
+  '/company/:companyId',
+  authMiddleware,
+  adminMiddleware,
+  validateData(companyLocationSchema),
+  adminCtrlr.updateCompanyLocation
+);
+
+adminRoute.get(
+  '/company',
+  authMiddleware,
+  adminMiddleware,
+  adminCtrlr.getCompanyLocation
 );
 
 adminRoute.get(

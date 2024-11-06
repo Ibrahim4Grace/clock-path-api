@@ -25,14 +25,13 @@ import {
   log,
   sendMail,
   parseEmails,
-  formatTime,
   sendConfirmationEmail,
   generateOTP,
   saveOTPToDatabase,
 } from '../utils/index.js';
 
 export const registerCompany = asyncHandler(async (req, res) => {
-  const { name, address } = req.body;
+  const { name, address, longitude, latitude, radius } = req.body;
   const admin = req.currentAdmin;
 
   const existingCompany = await Company.findOne({ adminId: admin._id });
@@ -63,6 +62,9 @@ export const registerCompany = asyncHandler(async (req, res) => {
   const company = await Company.create({
     name,
     address,
+    longitude,
+    latitude,
+    radius,
     adminId: admin._id,
     planId: subscription.plan._id,
     currentUserCount: 1,
@@ -70,6 +72,51 @@ export const registerCompany = asyncHandler(async (req, res) => {
   });
 
   sendJsonResponse(res, 201, 'Company registered successfully', company);
+});
+
+export const updateCompanyLocation = asyncHandler(async (req, res) => {
+  const { companyId } = req.params;
+  const { longitude, latitude, radius, address } = req.body;
+
+  const updateFields = {
+    location: {
+      type: 'Point',
+      coordinates: [longitude, latitude],
+    },
+  };
+
+  if (radius) {
+    updateFields.radius = radius;
+  }
+  if (address) {
+    updateFields.address = address;
+  }
+
+  const company = await Company.findByIdAndUpdate(companyId, updateFields, {
+    new: true,
+  });
+  if (!company) {
+    throw new ResourceNotFound('Company not found');
+  }
+
+  sendJsonResponse(res, 200, 'Company location updated successfully', company);
+});
+
+export const getCompanyLocation = asyncHandler(async (req, res) => {
+  const adminId = req.currentAdmin;
+
+  const company = await Company.findOne({ adminId });
+  if (!company) {
+    throw new ResourceNotFound('Company not found');
+  }
+
+  sendJsonResponse(res, 200, {
+    data: {
+      location: company.location,
+      radius: company.radius,
+      address: company.address,
+    },
+  });
 });
 
 export const getAdminStats = asyncHandler(async (req, res) => {
@@ -116,10 +163,20 @@ export const editUser = asyncHandler(async (req, res) => {
 
 export const editUserPost = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { email, full_name, role, work_days, shift_duration } = req.body;
+  const { email, full_name, role, work_days } = req.body;
   const file = req.file;
 
-  const updateFields = { email, full_name, role, work_days, shift_duration };
+  const updateFields = { email, full_name, role };
+
+  if (work_days) {
+    updateFields.work_days = work_days.map((day) => ({
+      day: day.day,
+      shift: {
+        start: day.shift.start,
+        end: day.shift.end,
+      },
+    }));
+  }
 
   Object.keys(updateFields).forEach((key) => {
     if (updateFields[key] === undefined) {
@@ -140,17 +197,7 @@ export const editUserPost = asyncHandler(async (req, res) => {
     throw new ResourceNotFound('User not found or update failed');
   }
 
-  const formattedUser = {
-    ...user.toObject(),
-    work_days: user.work_days ? user.work_days.join(' - ') : '',
-    shift_duration: user.shift_duration
-      ? `${formatTime(user.shift_duration.start)} - ${formatTime(
-          user.shift_duration.end
-        )}`
-      : '',
-  };
-
-  sendJsonResponse(res, 200, 'User updated successfully', formattedUser);
+  sendJsonResponse(res, 200, 'User updated successfully', user);
 });
 
 export const deleteUser = asyncHandler(async (req, res) => {

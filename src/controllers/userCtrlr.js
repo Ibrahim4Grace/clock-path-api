@@ -1,6 +1,11 @@
 import { cloudinary } from '../config/index.js';
-import { User, Request, ClockIn, Company } from '../models/index.js';
-import { sendJsonResponse } from '../helper/index.js';
+import { User, Request, ClockIn } from '../models/index.js';
+import { sendMail, updatePassword } from '../utils/index.js';
+import {
+  sendJsonResponse,
+  validateLocationAndSchedule,
+  validateLocationAndDistance,
+} from '../helper/index.js';
 import {
   asyncHandler,
   Conflict,
@@ -8,7 +13,6 @@ import {
   BadRequest,
   Unauthorized,
 } from '../middlewares/index.js';
-import { sendMail, formatTime, updatePassword } from '../utils/index.js';
 
 export const createProfile = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
@@ -147,69 +151,56 @@ export const clockIn = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
   const { longitude, latitude } = req.body;
 
-  // Validate coordinate ranges
-  if (longitude < -180 || longitude > 180) {
-    throw new BadRequest('Invalid longitude value');
-  }
-  if (latitude < -90 || latitude > 90) {
-    throw new BadRequest('Invalid latitude value');
-  }
+  // Validate location, distance, and schedule
+  const { user, userLocation, schedule, shiftStatus } =
+    await validateLocationAndSchedule(userId, longitude, latitude);
 
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new ResourceNotFound('User not found');
-  }
-
-  // Get user's company and check if within radius
-  const company = await Company.findById(user.companyId);
-  if (!company) {
-    throw new ResourceNotFound('Company not found');
-  }
-
-  // Create user location object for distance checking
-  const userLocation = {
-    type: 'Point',
-    coordinates: [longitude, latitude],
-  };
-
-  const isWithinRadius = await Company.findOne({
-    _id: company._id,
-    location: {
-      $near: {
-        $geometry: userLocation,
-        $maxDistance: company.radius || 100,
-      },
-    },
+  // Check if already clocked in
+  const openShift = await ClockIn.findOne({
+    user: userId,
+    clockOutTime: null,
   });
 
-  if (!isWithinRadius) {
-    throw new BadRequest(
-      `You must be within ${company.radius || 100} meters of ${
-        company.name
-      } to clock in`
-    );
-  }
-
-  // Check for existing open shift
-  const openShift = await ClockIn.findOne({ user: userId, clockOutTime: null });
   if (openShift) {
     throw new BadRequest('Already clocked in');
   }
 
+  // Create new clock-in record
   const newClockIn = await ClockIn.create({
     user: userId,
     clockInTime: new Date(),
-    location: userLocation,
+    location: userLocation, // clock-in location
+    clockOutLocation: { type: 'Point', coordinates: [0, 0] },
+    scheduledStart: shiftStatus.scheduledStart,
+    scheduledEnd: shiftStatus.scheduledEnd,
+    isLate: shiftStatus.isLate,
+    missedShift: shiftStatus.isMissedShift,
   });
 
-  sendJsonResponse(res, 201, 'Clocked in successfully', newClockIn);
+  // Prepare response message
+  let message = 'Clocked in successfully';
+  if (shiftStatus.isLate && !shiftStatus.isMissedShift) {
+    message += ' (Late arrival)';
+  } else if (shiftStatus.isMissedShift) {
+    message += ' (Missed shift)';
+  }
+
+  sendJsonResponse(res, 201, message, newClockIn);
 });
 
 export const clockOut = asyncHandler(async (req, res) => {
-  const user = req.currentUser;
+  const userId = req.currentUser;
+  const { longitude, latitude } = req.body;
+
+  // Validate location and distance only for clock out
+  const { userLocation } = await validateLocationAndDistance(
+    userId,
+    longitude,
+    latitude
+  );
 
   const clockInSession = await ClockIn.findOne({
-    user: user,
+    user: userId,
     clockOutTime: null,
   });
 
@@ -217,28 +208,77 @@ export const clockOut = asyncHandler(async (req, res) => {
     throw new ResourceNotFound('No active session to clock out');
   }
 
+  // Set clock out time and location
   clockInSession.clockOutTime = new Date();
+  clockInSession.clockOutLocation = userLocation;
 
-  // Calculate if the shift was missed
-  const shiftStart = new Date();
-  const shiftEnd = new Date();
+  // Check if leaving early
+  const currentTime = new Date();
+  // clockInSession.isEarlyDeparture = currentTime < clockInSession.scheduledEnd;
+  clockInSession.isEarlyDeparture =
+    clockInSession.clockOutTime < clockInSession.scheduledEnd;
 
-  // Set shift start and end times based on user’s scheduled shift duration
-  if (user.shift_duration) {
-    const [startHour, startMinute] = user.shift_duration.start.split(':');
-    shiftStart.setHours(startHour, startMinute, 0);
-
-    const [endHour, endMinute] = user.shift_duration.end.split(':');
-    shiftEnd.setHours(endHour, endMinute, 0);
-  }
-
-  const missedShift =
-    clockInSession.clockInTime > shiftEnd || !clockInSession.clockOutTime;
-  clockInSession.missedShift = missedShift;
+  // Calculate hours worked
+  const hoursWorked =
+    (clockInSession.clockOutTime - clockInSession.clockInTime) /
+    (1000 * 60 * 60);
+  clockInSession.hoursWorked = parseFloat(hoursWorked.toFixed(2));
 
   await clockInSession.save();
 
-  sendJsonResponse(res, 200, 'Clocked out successfully', clockInSession);
+  let message = 'Clocked out successfully';
+  if (clockInSession.isEarlyDeparture) {
+    message += ' (Early departure)';
+  }
+
+  sendJsonResponse(res, 200, message, clockInSession);
+});
+
+export const getRecentActivity = asyncHandler(async (req, res) => {
+  const userId = req.currentUser;
+
+  if (!res.paginatedResults) {
+    throw new ResourceNotFound('Paginated results not found');
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ResourceNotFound('User not found');
+  }
+
+  const { results, currentPage, totalPages } = res.paginatedResults;
+
+  const formattedActivity = results.map((record) => {
+    return {
+      date: new Date(record.clockInTime).toLocaleDateString(),
+      clockInTime: new Date(record.clockInTime).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }),
+      clockOutTime: record.clockOutTime
+        ? new Date(record.clockOutTime).toLocaleTimeString([], {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          })
+        : null,
+      status: record.missedShift
+        ? 'Missed Shift'
+        : record.isLate
+        ? 'Late Arrival'
+        : 'On Time',
+      hoursWorked: record.hoursWorked,
+    };
+  });
+
+  sendJsonResponse(res, 200, 'Recent activity retrieved successfully', {
+    results: formattedActivity,
+    pagination: {
+      currentPage,
+      totalPages,
+    },
+  });
 });
 
 export const userRequest = asyncHandler(async (req, res) => {
@@ -267,6 +307,28 @@ export const userRequest = asyncHandler(async (req, res) => {
   });
 
   sendJsonResponse(res, 201, 'Request created successfully', newRequest);
+});
+
+export const userRequests = asyncHandler(async (req, res) => {
+  const userId = req.currentUser;
+
+  if (!res.paginatedResults) {
+    throw new ResourceNotFound('Paginated results not found');
+  }
+
+  const { results, currentPage, totalPages } = res.paginatedResults;
+
+  if (!results || results.length === 0) {
+    throw new ResourceNotFound('No requests found for this user.');
+  }
+
+  sendJsonResponse(res, 200, 'User requests retrieved successfully', {
+    data: results,
+    pagination: {
+      currentPage,
+      totalPages,
+    },
+  });
 });
 
 export const managePasswords = asyncHandler(async (req, res) => {

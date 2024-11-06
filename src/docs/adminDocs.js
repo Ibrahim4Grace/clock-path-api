@@ -169,14 +169,40 @@ export const employeeDocs = {
                   role: { type: 'string', example: 'user' },
                   work_days: {
                     type: 'array',
-                    items: { type: 'string' },
-                    example: ['Monday', 'Wednesday'],
-                  },
-                  shift_duration: {
-                    type: 'object',
-                    properties: {
-                      start: { type: 'string', example: '09:00' },
-                      end: { type: 'string', example: '17:00' },
+                    items: {
+                      type: 'object',
+                      properties: {
+                        day: {
+                          type: 'string',
+                          enum: [
+                            'Monday',
+                            'Tuesday',
+                            'Wednesday',
+                            'Thursday',
+                            'Friday',
+                            'Saturday',
+                            'Sunday',
+                          ],
+                          example: 'Monday',
+                        },
+                        shift: {
+                          type: 'object',
+                          properties: {
+                            start: {
+                              type: 'string',
+                              format: 'time',
+                              example: '08:00',
+                            },
+                            end: {
+                              type: 'string',
+                              format: 'time',
+                              example: '17:00',
+                            },
+                          },
+                          required: ['start', 'end'],
+                        },
+                      },
+                      required: ['day', 'shift'],
                     },
                   },
                   image: { type: 'string', format: 'binary' },
@@ -205,12 +231,20 @@ export const employeeDocs = {
                         email: { type: 'string', example: 'john@example.com' },
                         fullName: { type: 'string', example: 'John Doe' },
                         work_days: {
-                          type: 'string',
-                          example: 'Monday - Wednesday',
-                        },
-                        shift_duration: {
-                          type: 'string',
-                          example: '09:00 - 17:00',
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              day: { type: 'string', example: 'Monday' },
+                              shift: {
+                                type: 'object',
+                                properties: {
+                                  start: { type: 'string', example: '08:00' },
+                                  end: { type: 'string', example: '17:00' },
+                                },
+                              },
+                            },
+                          },
                         },
                       },
                     },
@@ -754,7 +788,7 @@ export const adminPasswordDocs = {
 
 export const companyDocs = {
   paths: {
-    '/api/v1/admin/register-company': {
+    '/api/v1/admin/company/register': {
       post: {
         summary: 'Register a new company',
         tags: ['Admin', 'Company Registration'],
