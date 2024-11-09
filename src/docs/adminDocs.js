@@ -783,6 +783,38 @@ export const adminPasswordDocs = {
         },
       },
     },
+    '/api/v1/admin/logout': {
+      post: {
+        summary: 'Log out a admin by clearing their authentication cookies',
+        tags: ['Admin', 'Authentication'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Admin successfully logged out and cookies cleared.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Logout successful',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'Unauthorized - Invalid or expired token',
+          },
+          500: {
+            description: 'Server error',
+          },
+        },
+      },
+    },
   },
 };
 

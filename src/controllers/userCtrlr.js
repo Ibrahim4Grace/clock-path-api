@@ -1,6 +1,10 @@
 import { cloudinary } from '../config/index.js';
-import { User, Request, ClockIn } from '../models/index.js';
-import { sendMail, updatePassword } from '../utils/index.js';
+import { User, Request, ClockIn, DeviceToken } from '../models/index.js';
+import {
+  sendMail,
+  updatePassword,
+  NotificationService,
+} from '../utils/index.js';
 import {
   sendJsonResponse,
   validateLocationAndSchedule,
@@ -352,4 +356,28 @@ export const managePasswords = asyncHandler(async (req, res) => {
   await sendMail(emailContent);
 
   sendJsonResponse(res, 200, 'User password updated successfully');
+});
+
+export const registerDevice = asyncHandler(async (req, res) => {
+  const userId = req.currentUser;
+  const { deviceToken, platform } = req.body;
+
+  await DeviceToken.findOneAndUpdate(
+    { userId },
+    { deviceToken, platform },
+    { upsert: true, new: true }
+  );
+
+  res.status(200).json({ message: 'Device token registered successfully' });
+});
+
+export const userLogout = asyncHandler(async (req, res) => {
+  res.clearCookie('accessToken', '', {
+    expires: new Date(0),
+  });
+  res.clearCookie('refreshToken', '', {
+    expires: new Date(0),
+  });
+
+  sendJsonResponse(res, 200, 'Logout successful');
 });

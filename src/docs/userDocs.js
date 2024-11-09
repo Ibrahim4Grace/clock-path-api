@@ -668,6 +668,38 @@ export const userProfileDocs = {
         },
       },
     },
+    '/api/v1/user/logout': {
+      post: {
+        summary: 'Log out a user by clearing their authentication cookies',
+        tags: ['User', 'Authentication'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'User successfully logged out and cookies cleared.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Logout successful',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'Unauthorized - Invalid or expired token',
+          },
+          500: {
+            description: 'Server error',
+          },
+        },
+      },
+    },
     '/api/v1/user/work-schedule': {
       get: {
         summary: 'Get user work schedule',
@@ -711,6 +743,67 @@ export const userProfileDocs = {
           },
           404: { description: 'User not found' },
           500: { description: 'Server error' },
+        },
+      },
+    },
+  },
+};
+
+export const deviceDocs = {
+  paths: {
+    '/api/v1/user/device/register': {
+      post: {
+        summary: 'Register a device token for the user',
+        tags: ['User', 'Device Management'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  deviceToken: {
+                    type: 'string',
+                    example: 'abcdef12345xyz',
+                  },
+                  platform: {
+                    type: 'string',
+                    enum: ['android', 'ios'],
+                    example: 'android',
+                  },
+                },
+                required: ['deviceToken', 'platform'],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Device token registered successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: {
+                      type: 'string',
+                      example: 'Device token registered successfully',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Bad request - Missing or invalid parameters',
+          },
+          401: {
+            description: 'Unauthorized - Invalid or expired token',
+          },
+          500: {
+            description: 'Server error',
+          },
         },
       },
     },

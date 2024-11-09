@@ -7,6 +7,7 @@ import ClockIn from './clockIn.js';
 import Subscription from './subscription.js';
 import Plan from './plan.js';
 import Company from './company.js';
+import DeviceToken from './deviceToken.js';
 
 export {
   User,
@@ -18,4 +19,5 @@ export {
   Subscription,
   Plan,
   Company,
+  DeviceToken,
 };

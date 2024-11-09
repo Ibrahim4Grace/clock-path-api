@@ -159,4 +159,11 @@ adminRoute.post(
   adminCtrlr.managePassword
 );
 
+adminRoute.post(
+  '/logout',
+  authMiddleware,
+  adminMiddleware,
+  adminCtrlr.adminLogout
+);
+
 export default adminRoute;

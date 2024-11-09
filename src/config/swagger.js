@@ -14,6 +14,7 @@ import {
   subscriptionDocs,
   companyDocs,
   userProfileDocs,
+  deviceDocs,
 } from '../docs/index.js';
 
 const swaggerOptions = {
@@ -45,6 +46,7 @@ swaggerDocs.paths = {
   ...subscriptionDocs.paths,
   ...companyDocs.paths,
   ...userProfileDocs.paths,
+  ...deviceDocs.paths,
 };
 
 export const setupSwagger = (app) => {

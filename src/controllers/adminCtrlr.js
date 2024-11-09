@@ -519,3 +519,14 @@ export const managePassword = asyncHandler(async (req, res) => {
 
   sendJsonResponse(res, 200, 'Admin password updated successfully');
 });
+
+export const adminLogout = asyncHandler(async (req, res) => {
+  res.clearCookie('accessToken', '', {
+    expires: new Date(0),
+  });
+  res.clearCookie('refreshToken', '', {
+    expires: new Date(0),
+  });
+
+  sendJsonResponse(res, 200, 'Logout successful');
+});

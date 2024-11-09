@@ -90,4 +90,12 @@ userRoute.post(
   userCtrlr.managePasswords
 );
 
+userRoute.post(
+  '/device/register',
+  authMiddleware,
+  userMiddleware,
+  userCtrlr.registerDevice
+);
+
+userRoute.post('/logout', authMiddleware, userMiddleware, userCtrlr.userLogout);
 export default userRoute;
