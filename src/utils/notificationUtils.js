@@ -1,12 +1,12 @@
 import { DeviceToken } from '../models/index.js';
 import admin from 'firebase-admin';
 
-import serviceAccount from '../config/firebase/clock-path-firebase-adminsdk-asyus-9de953174d.json' assert { type: 'json' };
+// import serviceAccount from '../config/firebase/incoming.json'  };
 
 // Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// });
 
 class NotificationService {
   static async sendPushNotification(userId, notificationData) {
@@ -31,7 +31,7 @@ class NotificationService {
       };
 
       // Send message
-      const response = await admin.messaging().send(message);
+      // const response = await admin.messaging().send(message);
       return response;
     } catch (error) {
       console.error('Error sending notification:', error);
