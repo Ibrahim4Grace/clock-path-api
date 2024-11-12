@@ -1,14 +1,26 @@
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+console.log('dirname', __dirname);
 
+// Function to create the directory if it doesn't exist
+const createDirectoryIfNotExists = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+// Update the paths to point to the correct location
 export const adminImage = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, path.resolve(__dirname, '../public/adminImage/'));
+      const dir = path.resolve(__dirname, '../public/adminImage/');
+      createDirectoryIfNotExists(dir); // Ensure the directory exists
+      cb(null, dir);
     },
     filename: (req, file, cb) => {
       cb(
@@ -23,7 +35,10 @@ export const adminImage = multer({
 export const userImage = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, path.resolve(__dirname, '../public/userImage/'));
+      // Ensure this path resolves correctly to /opt/render/project/src/public/userImage/
+      const dir = path.resolve(__dirname, '../public/userImage/');
+      createDirectoryIfNotExists(dir); // Ensure the directory exists
+      cb(null, dir);
     },
     filename: (req, file, cb) => {
       cb(
@@ -38,7 +53,9 @@ export const userImage = multer({
 export const cvsUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, path.resolve(__dirname, '../public/cvsUpload/'));
+      const dir = path.resolve(__dirname, '../public/cvsUpload/');
+      createDirectoryIfNotExists(dir); // Ensure the directory exists
+      cb(null, dir);
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + path.extname(file.originalname);
