@@ -8,6 +8,7 @@ import {
   workScheduleSchema,
   passwordSchema,
   coordinatesSchema,
+  updateUserSchema,
 } from '../schema/index.js';
 import {
   validateData,
@@ -22,7 +23,7 @@ userRoute.post(
   authMiddleware,
   userMiddleware,
   userImage.single('image'),
-  validateData(workScheduleSchema),
+  validateData(updateUserSchema),
   userCtrlr.createProfile
 );
 
