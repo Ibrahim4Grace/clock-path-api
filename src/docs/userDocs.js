@@ -194,7 +194,7 @@ export const userRoutesDocs = {
         },
       },
     },
-    '/api/v1/user/request': {
+    '/api/v1/user/requests': {
       post: {
         summary: 'Create a user request',
         tags: ['User'],
