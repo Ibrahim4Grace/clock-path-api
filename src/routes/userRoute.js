@@ -40,7 +40,6 @@ userRoute.get(
   '/work-schedule',
   authMiddleware,
   userMiddleware,
-  validateData(workScheduleSchema),
   userCtrlr.getWorkSchedule
 );
 userRoute.post(

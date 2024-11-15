@@ -132,20 +132,35 @@ export const updateProfile = asyncHandler(async (req, res) => {
 
 export const getWorkSchedule = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const perPage = Math.max(parseInt(req.query.perPage) || 6, 1);
+
   const user = await User.findById(userId);
 
   if (!user) {
     throw new ResourceNotFound('User not found');
   }
 
-  const workSchedule = {
-    work_days: user.work_days.map((day) => ({
+  const totalItems = user.work_days.length;
+  const totalPages = Math.ceil(totalItems / perPage);
+
+  // Paginate the work_days array
+  const paginatedWorkDays = user.work_days
+    .slice((page - 1) * perPage, page * perPage)
+    .map((day) => ({
       day: day.day,
       shift: {
         start: day.shift?.start || '00:00',
         end: day.shift?.end || '00:00',
       },
-    })),
+    }));
+
+  const workSchedule = {
+    currentPage: page,
+    totalPages,
+    totalItems,
+    perPage,
+    work_days: paginatedWorkDays,
   };
 
   sendJsonResponse(res, 200, 'User work days', { data: workSchedule });

@@ -5,7 +5,6 @@ import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-console.log('dirname', __dirname);
 
 // Function to create the directory if it doesn't exist
 const createDirectoryIfNotExists = (dirPath) => {
@@ -14,7 +13,6 @@ const createDirectoryIfNotExists = (dirPath) => {
   }
 };
 
-// Update the paths to point to the correct location
 export const adminImage = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
@@ -35,9 +33,8 @@ export const adminImage = multer({
 export const userImage = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      // Ensure this path resolves correctly to /opt/render/project/src/public/userImage/
       const dir = path.resolve(__dirname, '../public/userImage/');
-      createDirectoryIfNotExists(dir); // Ensure the directory exists
+      createDirectoryIfNotExists(dir);
       cb(null, dir);
     },
     filename: (req, file, cb) => {
@@ -54,7 +51,7 @@ export const cvsUpload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
       const dir = path.resolve(__dirname, '../public/cvsUpload/');
-      createDirectoryIfNotExists(dir); // Ensure the directory exists
+      createDirectoryIfNotExists(dir);
       cb(null, dir);
     },
     filename: (req, file, cb) => {

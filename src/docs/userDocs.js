@@ -359,7 +359,7 @@ export const userRoutesDocs = {
 export const userPasswordDocs = {
   paths: {
     '/api/v1/user/passwords': {
-      put: {
+      post: {
         summary: 'Manage user password',
         tags: ['User', 'User Management'],
         security: [{ bearerAuth: [] }],
@@ -705,6 +705,18 @@ export const userProfileDocs = {
         summary: 'Get user work schedule',
         tags: ['User', 'Profile'],
         security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            description: 'Page number for pagination',
+            required: false,
+            schema: {
+              type: 'integer',
+              example: 1,
+            },
+          },
+        ],
         responses: {
           200: {
             description: 'User work schedule retrieved successfully.',
@@ -734,6 +746,15 @@ export const userProfileDocs = {
                             },
                           },
                         },
+                        pagination: {
+                          type: 'object',
+                          properties: {
+                            currentPage: { type: 'integer', example: 1 },
+                            totalPages: { type: 'integer', example: 2 },
+                            totalItems: { type: 'integer', example: 7 },
+                            perPage: { type: 'integer', example: 6 },
+                          },
+                        },
                       },
                     },
                   },
@@ -741,7 +762,23 @@ export const userProfileDocs = {
               },
             },
           },
-          404: { description: 'User not found' },
+          404: {
+            description: 'User not found or no workdays available.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'User not found or no workdays available.',
+                    },
+                  },
+                },
+              },
+            },
+          },
           500: { description: 'Server error' },
         },
       },
