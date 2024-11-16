@@ -3,7 +3,7 @@ import { asyncHandler } from '../middlewares/index.js';
 export const paginatedResults = (model, getFilter = () => ({})) => {
   return asyncHandler(async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
-    const perPage = 6;
+    const perPage = parseInt(req.query.limit) || 6;
 
     const filter = getFilter(req);
 
@@ -21,6 +21,7 @@ export const paginatedResults = (model, getFilter = () => ({})) => {
       results,
       currentPage: page,
       totalPages,
+      limit: perPage,
     };
 
     next();

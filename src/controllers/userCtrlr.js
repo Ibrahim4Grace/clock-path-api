@@ -265,7 +265,7 @@ export const getRecentActivity = asyncHandler(async (req, res) => {
     throw new ResourceNotFound('User not found');
   }
 
-  const { results, currentPage, totalPages } = res.paginatedResults;
+  const { results, currentPage, totalPages, limit } = res.paginatedResults;
 
   const formattedActivity = results.map((record) => {
     return {
@@ -296,6 +296,7 @@ export const getRecentActivity = asyncHandler(async (req, res) => {
     pagination: {
       currentPage,
       totalPages,
+      limit,
     },
   });
 });
@@ -335,7 +336,7 @@ export const userRequests = asyncHandler(async (req, res) => {
     throw new ResourceNotFound('Paginated results not found');
   }
 
-  const { results, currentPage, totalPages } = res.paginatedResults;
+  const { results, currentPage, totalPages, limit } = res.paginatedResults;
 
   if (!results || results.length === 0) {
     throw new ResourceNotFound('No requests found for this user.');
@@ -346,6 +347,7 @@ export const userRequests = asyncHandler(async (req, res) => {
     pagination: {
       currentPage,
       totalPages,
+      limit,
     },
   });
 });
