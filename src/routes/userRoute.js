@@ -9,6 +9,7 @@ import {
   passwordSchema,
   coordinatesSchema,
   updateUserSchema,
+  reminderSchema,
 } from '../schema/index.js';
 import {
   validateData,
@@ -56,6 +57,20 @@ userRoute.post(
   userMiddleware,
   validateData(coordinatesSchema),
   userCtrlr.clockOut
+);
+
+userRoute.post(
+  '/reminder',
+  authMiddleware,
+  userMiddleware,
+  validateData(reminderSchema),
+  userCtrlr.setReminder
+);
+userRoute.get(
+  '/reminder',
+  authMiddleware,
+  userMiddleware,
+  userCtrlr.getCurrentReminders
 );
 
 userRoute.get(

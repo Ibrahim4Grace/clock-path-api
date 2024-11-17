@@ -121,7 +121,7 @@ export const adminLogin = asyncHandler(async (req, res) => {
 
   const isPasswordMatch = await admin.matchPassword(password);
   if (!isPasswordMatch) {
-    throw new Unauthorized('Invalid email or passwordd');
+    throw new Unauthorized('Invalid email or password');
   }
 
   const emailContent = loginNotification(admin);

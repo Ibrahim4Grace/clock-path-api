@@ -135,6 +135,137 @@ export const userRoutesDocs = {
         },
       },
     },
+    '/api/v1/user/reminder': {
+      post: {
+        summary: 'Set clock-in and clock-out reminders for today',
+        tags: ['User', 'Reminders'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  clockInReminder: { type: 'string', example: '08:00' },
+                  clockOutReminder: { type: 'string', example: '16:00' },
+                },
+                required: ['clockInReminder', 'clockOutReminder'],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Reminder set successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Reminder updated successfully',
+                    },
+                    reminders: {
+                      type: 'object',
+                      properties: {
+                        clockIn: { type: 'string', example: '08:00 AM' },
+                        clockOut: { type: 'string', example: '04:00 PM' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description:
+              'Invalid reminder time or no work schedule found for today.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example:
+                        'Clock-in reminder must be before shift start time.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: {
+            description: 'User not found.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: { type: 'string', example: 'User not found' },
+                  },
+                },
+              },
+            },
+          },
+          500: { description: 'Server error' },
+        },
+      },
+      get: {
+        summary: 'Get current clock-in and clock-out reminders',
+        tags: ['User', 'Reminders'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Reminders retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Reminders retrieved successfully',
+                    },
+                    reminders: {
+                      type: 'object',
+                      properties: {
+                        clockIn: { type: 'string', example: '08:00 AM' },
+                        clockOut: { type: 'string', example: '04:00 PM' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          404: {
+            description: 'User not found or no reminders set.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'No reminders set for the user',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          500: { description: 'Server error' },
+        },
+      },
+    },
     '/api/v1/user/recent-activity': {
       get: {
         summary: 'Get the users recent clock-in and clock-out activity',
@@ -736,6 +867,7 @@ export const userProfileDocs = {
                             type: 'object',
                             properties: {
                               day: { type: 'string', example: 'Monday' },
+                              date: { type: 'string', example: '2024-11-17' },
                               shift: {
                                 type: 'object',
                                 properties: {

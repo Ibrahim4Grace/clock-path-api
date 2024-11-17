@@ -9,6 +9,11 @@ import {
   sendJsonResponse,
   validateLocationAndSchedule,
   validateLocationAndDistance,
+  checkUserReminders,
+  convertTo12Hour,
+  formatDate,
+  getWeekDates,
+  parseReminderTime,
 } from '../helper/index.js';
 import {
   asyncHandler,
@@ -29,8 +34,8 @@ export const createProfile = asyncHandler(async (req, res) => {
     updateFields.work_days = work_days.map((day) => ({
       day: day.day,
       shift: {
-        start: day.shift.start,
-        end: day.shift.end,
+        start: convertTo12Hour(day.shift.start),
+        end: convertTo12Hour(day.shift.end),
       },
     }));
   }
@@ -84,8 +89,8 @@ export const updateProfile = asyncHandler(async (req, res) => {
     updateFields.work_days = work_days.map((day) => ({
       day: day.day,
       shift: {
-        start: day.shift.start,
-        end: day.shift.end,
+        start: convertTo12Hour(day.shift.start),
+        end: convertTo12Hour(day.shift.end),
       },
     }));
   }
@@ -132,38 +137,48 @@ export const updateProfile = asyncHandler(async (req, res) => {
 
 export const getWorkSchedule = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
-  const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const perPage = Math.max(parseInt(req.query.perPage) || 6, 1);
 
   const user = await User.findById(userId);
-
   if (!user) {
     throw new ResourceNotFound('User not found');
   }
 
-  const totalItems = user.work_days.length;
-  const totalPages = Math.ceil(totalItems / perPage);
+  // Get Monday of current week
+  const monday = getWeekDates();
 
-  // Paginate the work_days array
-  const paginatedWorkDays = user.work_days
-    .slice((page - 1) * perPage, page * perPage)
-    .map((day) => ({
-      day: day.day,
+  // Add dates to work days
+  const workDaysWithDates = user.work_days.map((workDay, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+
+    return {
+      day: workDay.day,
+      date: formatDate(date),
       shift: {
-        start: day.shift?.start || '00:00',
-        end: day.shift?.end || '00:00',
+        start: workDay.shift.start,
+        end: workDay.shift.end,
       },
-    }));
+    };
+  });
 
-  const workSchedule = {
-    currentPage: page,
-    totalPages,
-    totalItems,
-    perPage,
-    work_days: paginatedWorkDays,
-  };
+  // Pagination
+  const page = parseInt(req.query.page) || 1;
+  const perPage = parseInt(req.query.perPage) || 6;
+  const startIndex = (page - 1) * perPage;
+  const paginatedWorkDays = workDaysWithDates.slice(
+    startIndex,
+    startIndex + perPage
+  );
 
-  sendJsonResponse(res, 200, 'User work days', { data: workSchedule });
+  return sendJsonResponse(res, 200, 'User work days', {
+    data: {
+      currentPage: page,
+      totalPages: Math.ceil(workDaysWithDates.length / perPage),
+      totalItems: workDaysWithDates.length,
+      perPage: perPage,
+      work_days: paginatedWorkDays,
+    },
+  });
 });
 
 export const clockIn = asyncHandler(async (req, res) => {
@@ -251,6 +266,68 @@ export const clockOut = asyncHandler(async (req, res) => {
   }
 
   sendJsonResponse(res, 200, message, clockInSession);
+});
+
+export const setReminder = asyncHandler(async (req, res) => {
+  const { clockInReminder, clockOutReminder } = req.body;
+
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    throw new ResourceNotFound('User not found');
+  }
+
+  const today = new Date().toLocaleString('en-us', { weekday: 'long' });
+  const todayShift = user.work_days.find((workDay) => workDay.day === today);
+
+  if (!todayShift) {
+    throw new ResourceNotFound('No work schedule found for today');
+  }
+
+  const shiftStart = parseReminderTime(todayShift.shift.start);
+  const shiftEnd = parseReminderTime(todayShift.shift.end);
+
+  if (clockInReminder) {
+    const clockInTime = parseReminderTime(clockInReminder);
+    if (clockInTime >= shiftStart) {
+      throw new BadRequest(
+        `Clock-in reminder (${convertTo12Hour(
+          clockInReminder
+        )}) must be before shift start time (${todayShift.shift.start}).`
+      );
+    }
+  }
+
+  if (clockOutReminder) {
+    const clockOutTime = parseReminderTime(clockOutReminder);
+    if (clockOutTime >= shiftEnd) {
+      throw new BadRequest(
+        `Clock-out reminder (${convertTo12Hour(
+          clockOutReminder
+        )}) must be before shift end time (${todayShift.shift.end}).`
+      );
+    }
+  }
+
+  user.reminders.clockIn = clockInReminder;
+  user.reminders.clockOut = clockOutReminder;
+  await user.save();
+
+  sendJsonResponse(res, 200, 'Reminder updated successfully', {
+    reminders: {
+      clockIn: convertTo12Hour(clockInReminder),
+      clockOut: convertTo12Hour(clockOutReminder),
+    },
+  });
+});
+
+export const getCurrentReminders = asyncHandler(async (req, res) => {
+  const reminders = await checkUserReminders(req.currentUser);
+
+  if (!reminders) {
+    throw new BadRequest('Unable to check reminders');
+  }
+
+  sendJsonResponse(res, 200, 'Reminders retrieved successfully', reminders);
 });
 
 export const getRecentActivity = asyncHandler(async (req, res) => {

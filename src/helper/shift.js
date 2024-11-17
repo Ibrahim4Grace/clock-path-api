@@ -2,7 +2,7 @@ import { User, Company } from '../models/index.js';
 import { ResourceNotFound, BadRequest } from '../middlewares/index.js';
 
 // Convert 24-hour format to 12-hour format
-const convertTo12Hour = (time24h) => {
+export const convertTo12Hour = (time24h) => {
   const [hours, minutes] = time24h.split(':');
   const hour = parseInt(hours);
 

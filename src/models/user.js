@@ -43,6 +43,10 @@ const userSchema = new mongoose.Schema(
       ref: 'Company',
       required: true,
     },
+    reminders: {
+      clockIn: { type: String },
+      clockOut: { type: String },
+    },
   },
   {
     timestamps: true,

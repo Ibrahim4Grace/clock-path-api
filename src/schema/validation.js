@@ -164,18 +164,17 @@ export const workScheduleSchema = z.object({
         ]),
         shift: z.object({
           start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-            message: 'Invalid start time',
+            message: 'Start time must be in HH:MM format (e.g., 09:00)',
           }),
           end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-            message: 'Invalid end time',
+            message: 'End time must be in HH:MM format (e.g., 17:00)',
           }),
         }),
       })
     )
-    .min(1), // Require at least one work day
-  // Other user profile fields
-  full_name: z.string().optional(),
-  role: z.string().optional(),
+    .min(1, 'At least one work day must be specified'),
+  full_name: z.string(),
+  role: z.string(),
   image: z
     .object({
       imageId: z.string(),
@@ -305,4 +304,12 @@ export const companyLocationSchema = z.object({
   latitude: z.number().min(-90).max(90),
   radius: z.number().min(1).max(1000).default(20),
   address: z.array(addressSchema).length(1),
+});
+export const reminderSchema = z.object({
+  clockInReminder: z
+    .string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/, 'Invalid time format'),
+  clockOutReminder: z
+    .string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/, 'Invalid time format'),
 });

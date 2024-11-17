@@ -12,6 +12,7 @@ import {
   sendJsonResponse,
   generateAttendanceSummary,
   createDocDefinition,
+  convertTo12Hour,
 } from '../helper/index.js';
 import {
   asyncHandler,
@@ -172,8 +173,8 @@ export const editUserPost = asyncHandler(async (req, res) => {
     updateFields.work_days = work_days.map((day) => ({
       day: day.day,
       shift: {
-        start: day.shift.start,
-        end: day.shift.end,
+        start: convertTo12Hour(day.shift.start),
+        end: convertTo12Hour(day.shift.end),
       },
     }));
   }
