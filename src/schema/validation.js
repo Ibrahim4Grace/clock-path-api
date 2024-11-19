@@ -173,8 +173,8 @@ export const workScheduleSchema = z.object({
       })
     )
     .min(1, 'At least one work day must be specified'),
-  full_name: z.string(),
-  role: z.string(),
+  full_name: z.string().optional(),
+  role: z.string().optional(),
   image: z
     .object({
       imageId: z.string(),
