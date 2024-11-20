@@ -469,6 +469,7 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
   const requestNotifications = requests.map((request) => ({
     type: 'request',
     status: request.status,
+    requestType: request.requestType,
     message:
       request.status === 'accepted'
         ? `Your ${request.requestType} request for ${formatDate(
