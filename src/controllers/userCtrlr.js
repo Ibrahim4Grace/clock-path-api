@@ -1,10 +1,6 @@
 import { cloudinary } from '../config/index.js';
 import { User, Request, ClockIn, DeviceToken } from '../models/index.js';
-import {
-  sendMail,
-  updatePassword,
-  NotificationService,
-} from '../utils/index.js';
+import { sendMail, updatePassword } from '../utils/index.js';
 import {
   sendJsonResponse,
   validateLocationAndSchedule,
@@ -452,17 +448,94 @@ export const managePasswords = asyncHandler(async (req, res) => {
   sendJsonResponse(res, 200, 'User password updated successfully');
 });
 
-export const registerDevice = asyncHandler(async (req, res) => {
+export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
-  const { deviceToken, platform } = req.body;
 
-  await DeviceToken.findOneAndUpdate(
-    { userId },
-    { deviceToken, platform },
-    { upsert: true, new: true }
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const totalNotifications = await Request.countDocuments({
+    user: userId,
+    status: { $in: ['accepted', 'declined'] },
+  });
+
+  const requests = await Request.find({
+    user: userId,
+    status: { $in: ['accepted', 'declined'] },
+  })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .select('requestType status startDate endDate createdAt');
+
+  const user = await User.findById(userId).select(
+    'reminders.clockIn reminders.clockOut'
   );
 
-  res.status(200).json({ message: 'Device token registered successfully' });
+  const notifications = requests.map((request) => {
+    let message = '';
+    if (request.status === 'accepted') {
+      message = `Your ${request.requestType} request for ${formatDate(
+        request.startDate
+      )} to ${formatDate(request.endDate)} has been accepted`;
+    } else {
+      message = `Your ${request.requestType} request for ${formatDate(
+        request.startDate
+      )} to ${formatDate(request.endDate)} has been declined`;
+    }
+
+    return {
+      type: 'request',
+      status: request.status,
+      message,
+      date: request.createdAt,
+    };
+  });
+
+  const reminders = [];
+  if (user.reminders.clockIn) {
+    reminders.push({
+      type: 'reminder',
+      category: 'clockIn',
+      message: `Daily clock-in reminder set for ${user.reminders.clockIn}`,
+      time: user.reminders.clockIn,
+    });
+  }
+
+  if (user.reminders.clockOut) {
+    reminders.push({
+      type: 'reminder',
+      category: 'clockOut',
+      message: `Daily clock-out reminder set for ${user.reminders.clockOut}`,
+      time: user.reminders.clockOut,
+    });
+  }
+
+  const totalPages = Math.ceil(totalNotifications / limit);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
+  const response = {
+    notifications,
+    reminders,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems: totalNotifications,
+      itemsPerPage: limit,
+      hasNextPage,
+      hasPrevPage,
+      nextPage: hasNextPage ? page + 1 : null,
+      prevPage: hasPrevPage ? page - 1 : null,
+    },
+    meta: {
+      totalNotifications,
+      totalReminders: reminders.length,
+    },
+  };
+
+  return res.status(200).json(response);
 });
 
 export const userLogout = asyncHandler(async (req, res) => {

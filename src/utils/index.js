@@ -6,4 +6,3 @@ export * from './tokens.js';
 export * from './parseCSV.js';
 export * from './pagination.js';
 export * from './paymentRequest.js';
-export * from './notificationUtils.js';

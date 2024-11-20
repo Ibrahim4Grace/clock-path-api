@@ -105,11 +105,11 @@ userRoute.post(
   userCtrlr.managePasswords
 );
 
-userRoute.post(
-  '/device/register',
+userRoute.get(
+  '/notification',
   authMiddleware,
   userMiddleware,
-  userCtrlr.registerDevice
+  userCtrlr.getNotificationsAndReminders
 );
 
 userRoute.post('/logout', authMiddleware, userMiddleware, userCtrlr.userLogout);
