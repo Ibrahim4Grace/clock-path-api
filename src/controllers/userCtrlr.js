@@ -451,12 +451,10 @@ export const managePasswords = asyncHandler(async (req, res) => {
 export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
 
-  // Pagination parameters
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  // Find requests
   const requests = await Request.find({
     user: userId,
     status: { $in: ['accepted', 'declined'] },
@@ -464,12 +462,10 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 })
     .select('requestType status startDate endDate createdAt');
 
-  // Get user's reminders
   const user = await User.findById(userId).select(
     'reminders.clockIn reminders.clockOut'
   );
 
-  // Format the notifications
   const requestNotifications = requests.map((request) => ({
     type: 'request',
     status: request.status,
@@ -482,40 +478,37 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
             request.startDate
           )} to ${formatDate(request.endDate)} has been declined`,
     createdAt: request.createdAt,
-    sortDate: request.createdAt, // for sorting
+    sortDate: request.createdAt,
   }));
 
-  // Format the reminders and add current date
   const currentDate = new Date();
   const reminderNotifications = [];
 
   if (user.reminders.clockIn) {
     reminderNotifications.push({
       type: 'reminder',
-      status: 'clockIn', // Changed from category to status
+      status: 'clockIn',
       message: `Daily clock-in reminder set for ${user.reminders.clockIn}`,
       time: user.reminders.clockIn,
-      sortDate: currentDate, // for sorting
+      sortDate: currentDate,
     });
   }
 
   if (user.reminders.clockOut) {
     reminderNotifications.push({
       type: 'reminder',
-      status: 'clockOut', // Changed from category to status
+      status: 'clockOut',
       message: `Daily clock-out reminder set for ${user.reminders.clockOut}`,
       time: user.reminders.clockOut,
-      sortDate: currentDate, // for sorting
+      sortDate: currentDate,
     });
   }
 
-  // Combine and sort all notifications
   const allNotifications = [
     ...requestNotifications,
     ...reminderNotifications,
   ].sort((a, b) => b.sortDate - a.sortDate);
 
-  // Apply pagination to combined array
   const paginatedNotifications = allNotifications.slice(skip, skip + limit);
 
   const totalItems = allNotifications.length;
@@ -526,7 +519,7 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
   const response = {
     notifications: paginatedNotifications.map(
       ({ sortDate, ...notification }) => notification
-    ), // remove sortDate from final output
+    ),
     pagination: {
       currentPage: page,
       totalPages,
@@ -541,100 +534,6 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
 
   return res.status(200).json(response);
 });
-
-// export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
-//   const userId = req.currentUser;
-
-//   // Pagination parameters
-//   const page = parseInt(req.query.page) || 1;
-//   const limit = parseInt(req.query.limit) || 10;
-//   const skip = (page - 1) * limit;
-
-//   // Find requests
-//   const requests = await Request.find({
-//     user: userId,
-//     status: { $in: ['accepted', 'declined'] },
-//   })
-//     .sort({ createdAt: -1 })
-//     .select('requestType status startDate endDate createdAt');
-
-//   // Get user's reminders
-//   const user = await User.findById(userId).select(
-//     'reminders.clockIn reminders.clockOut'
-//   );
-
-//   // Format the notifications
-//   const requestNotifications = requests.map((request) => ({
-//     type: 'request',
-//     status: request.status,
-//     message:
-//       request.status === 'accepted'
-//         ? `Your ${request.requestType} request for ${formatDate(
-//             request.startDate
-//           )} to ${formatDate(request.endDate)} has been accepted`
-//         : `Your ${request.requestType} request for ${formatDate(
-//             request.startDate
-//           )} to ${formatDate(request.endDate)} has been declined`,
-//     createdAt: request.createdAt,
-//     sortDate: request.createdAt, // for sorting
-//   }));
-
-//   // Format the reminders and add current date
-//   const currentDate = new Date();
-//   const reminderNotifications = [];
-
-//   if (user.reminders.clockIn) {
-//     reminderNotifications.push({
-//       type: 'reminder',
-//       category: 'clockIn',
-//       message: `Daily clock-in reminder set for ${user.reminders.clockIn}`,
-//       time: user.reminders.clockIn,
-//       sortDate: currentDate, // for sorting
-//     });
-//   }
-
-//   if (user.reminders.clockOut) {
-//     reminderNotifications.push({
-//       type: 'reminder',
-//       category: 'clockOut',
-//       message: `Daily clock-out reminder set for ${user.reminders.clockOut}`,
-//       time: user.reminders.clockOut,
-//       sortDate: currentDate, // for sorting
-//     });
-//   }
-
-//   // Combine and sort all notifications
-//   const allNotifications = [
-//     ...requestNotifications,
-//     ...reminderNotifications,
-//   ].sort((a, b) => b.sortDate - a.sortDate);
-
-//   // Apply pagination to combined array
-//   const paginatedNotifications = allNotifications.slice(skip, skip + limit);
-
-//   const totalItems = allNotifications.length;
-//   const totalPages = Math.ceil(totalItems / limit);
-//   const hasNextPage = page < totalPages;
-//   const hasPrevPage = page > 1;
-
-//   const response = {
-//     notifications: paginatedNotifications.map(
-//       ({ sortDate, ...notification }) => notification
-//     ), // remove sortDate from final output
-//     pagination: {
-//       currentPage: page,
-//       totalPages,
-//       totalItems,
-//       itemsPerPage: limit,
-//       hasNextPage,
-//       hasPrevPage,
-//       nextPage: hasNextPage ? page + 1 : null,
-//       prevPage: hasPrevPage ? page - 1 : null,
-//     },
-//   };
-
-//   return res.status(200).json(response);
-// });
 
 export const userLogout = asyncHandler(async (req, res) => {
   res.clearCookie('accessToken', '', {
