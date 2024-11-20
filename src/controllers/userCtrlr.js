@@ -533,7 +533,7 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
     },
   };
 
-  return res.status(200).json(response);
+  sendJsonResponse(res, 200, 'Notification succesful', { response });
 });
 
 export const userLogout = asyncHandler(async (req, res) => {
