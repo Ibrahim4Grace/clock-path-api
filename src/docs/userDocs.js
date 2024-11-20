@@ -915,6 +915,96 @@ export const userProfileDocs = {
         },
       },
     },
+    '/api/v1/user/notifications': {
+      get: {
+        summary: 'Get user notifications and reminders',
+        tags: ['User', 'Notifications'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            description: 'Page number for pagination (default is 1)',
+            required: false,
+            schema: { type: 'integer', example: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Number of items per page (default is 10)',
+            required: false,
+            schema: { type: 'integer', example: 10 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Notifications and reminders retrieved successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    notifications: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          type: { type: 'string', example: 'request' },
+                          status: { type: 'string', example: 'accepted' },
+                          message: {
+                            type: 'string',
+                            example:
+                              'Your vacation request for 2024-11-01 to 2024-11-05 has been accepted',
+                          },
+                          date: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                    reminders: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          type: { type: 'string', example: 'reminder' },
+                          category: { type: 'string', example: 'clockIn' },
+                          message: {
+                            type: 'string',
+                            example: 'Daily clock-in reminder set for 08:00 AM',
+                          },
+                          time: { type: 'string', example: '08:00 AM' },
+                        },
+                      },
+                    },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        currentPage: { type: 'integer', example: 1 },
+                        totalPages: { type: 'integer', example: 5 },
+                        totalItems: { type: 'integer', example: 50 },
+                        itemsPerPage: { type: 'integer', example: 10 },
+                        hasNextPage: { type: 'boolean', example: true },
+                        hasPrevPage: { type: 'boolean', example: false },
+                        nextPage: { type: 'integer', example: 2 },
+                        prevPage: { type: 'integer', example: null },
+                      },
+                    },
+                    meta: {
+                      type: 'object',
+                      properties: {
+                        totalNotifications: { type: 'integer', example: 45 },
+                        totalReminders: { type: 'integer', example: 2 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: 'Unauthorized: Invalid or missing token' },
+          500: { description: 'Internal server error' },
+        },
+      },
+    },
   },
 };
 

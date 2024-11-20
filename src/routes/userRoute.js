@@ -106,7 +106,7 @@ userRoute.post(
 );
 
 userRoute.get(
-  '/notification',
+  '/notifications',
   authMiddleware,
   userMiddleware,
   userCtrlr.getNotificationsAndReminders
