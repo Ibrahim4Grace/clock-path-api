@@ -10,6 +10,7 @@ import {
   coordinatesSchema,
   updateUserSchema,
   reminderSchema,
+  notificationSchema,
 } from '../schema/index.js';
 import {
   validateData,
@@ -110,6 +111,14 @@ userRoute.get(
   authMiddleware,
   userMiddleware,
   userCtrlr.getNotificationsAndReminders
+);
+
+userRoute.post(
+  '/notifications/send',
+  authMiddleware,
+  userMiddleware,
+  validateData(notificationSchema),
+  userCtrlr.sendNotification
 );
 
 userRoute.post('/logout', authMiddleware, userMiddleware, userCtrlr.userLogout);

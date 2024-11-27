@@ -1,6 +1,7 @@
 import { cloudinary } from '../config/index.js';
-import { User, Request, ClockIn, DeviceToken } from '../models/index.js';
+import { User, Request, ClockIn, Notification } from '../models/index.js';
 import { sendMail, updatePassword } from '../utils/index.js';
+import { admins } from '../config/firebase/index.js';
 import {
   sendJsonResponse,
   validateLocationAndSchedule,
@@ -534,6 +535,41 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
   };
 
   sendJsonResponse(res, 200, 'Notification succesful', { response });
+});
+
+export const sendNotification = asyncHandler(async (req, res) => {
+  const userId = req.currentUser;
+  const { deviceToken, title, body } = req.body;
+
+  const message = {
+    token: deviceToken,
+    notification: {
+      title,
+      body,
+    },
+    android: {
+      priority: 'high',
+    },
+    apns: {
+      payload: {
+        aps: {
+          badge: 42,
+        },
+      },
+    },
+  };
+
+  const notification = new Notification({
+    title,
+    body,
+    deviceToken,
+    userId,
+  });
+  await notification.save();
+
+  const response = await admins.messaging().send(message);
+
+  sendJsonResponse(res, 200, 'Notification sent successfully', response);
 });
 
 export const userLogout = asyncHandler(async (req, res) => {

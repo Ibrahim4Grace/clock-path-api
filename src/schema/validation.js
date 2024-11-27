@@ -313,3 +313,17 @@ export const reminderSchema = z.object({
     .string()
     .regex(/^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/, 'Invalid time format'),
 });
+
+export const notificationSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Title type is required')
+    .transform(sanitizeInput),
+  body: z.string().trim().min(1, 'Body is required').transform(sanitizeInput),
+  deviceToken: z
+    .string()
+    .trim()
+    .min(1, 'Token is required')
+    .transform(sanitizeInput),
+});

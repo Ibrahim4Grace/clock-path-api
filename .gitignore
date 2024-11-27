@@ -1,6 +1,11 @@
 node_modules/
 .env
 
+# Ignore Firebase service account key
+src/config/firebase/*.json
+
+
+
 # Logs
 logs
 *.log

@@ -1007,3 +1007,109 @@ export const userProfileDocs = {
     },
   },
 };
+
+export const notificationDocs = {
+  paths: {
+    '/api/v1/user/notifications/send': {
+      post: {
+        summary: 'Send a push notification to a user',
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  deviceToken: {
+                    type: 'string',
+                    example: 'cIudjAuz7lk:APA91bE3f2vV...0af9fXQv57',
+                  },
+                  title: {
+                    type: 'string',
+                    example: 'Welcome!',
+                  },
+                  body: {
+                    type: 'string',
+                    example: 'Your registration was successful.',
+                  },
+                },
+                required: ['deviceToken', 'title', 'body'],
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Notification sent successfully.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Notification sent successfully',
+                    },
+                    response: {
+                      type: 'object',
+                      properties: {
+                        messageId: {
+                          type: 'string',
+                          example: 'projects/myapp/messages/12345',
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            description: 'Invalid request data.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'Validation error: Missing required fields.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: {
+            description: 'Unauthorized access. Missing or invalid token.',
+          },
+          500: {
+            description: 'Internal server error.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'Failed to send notification.',
+                    },
+                    error: {
+                      type: 'string',
+                      example: 'Firebase messaging error.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
