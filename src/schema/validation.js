@@ -58,7 +58,7 @@ export const loginSchema = z.object({
     .min(1, 'Email is required')
     .email('Invalid email address')
     .transform(sanitizeInput),
-  deviceToken: z.string().min(6),
+  deviceoken: z.string().optional(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
