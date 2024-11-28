@@ -13,7 +13,9 @@ import {
   generateAttendanceSummary,
   createDocDefinition,
   convertTo12Hour,
+  formatDate,
 } from '../helper/index.js';
+
 import {
   asyncHandler,
   ResourceNotFound,
