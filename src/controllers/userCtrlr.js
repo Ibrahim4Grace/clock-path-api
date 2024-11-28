@@ -1,7 +1,6 @@
 import { cloudinary } from '../config/index.js';
-import { User, Request, ClockIn, Notification } from '../models/index.js';
+import { User, Request, ClockIn } from '../models/index.js';
 import { sendMail, updatePassword } from '../utils/index.js';
-import { admins } from '../config/firebase/index.js';
 import {
   sendJsonResponse,
   validateLocationAndSchedule,
@@ -11,6 +10,7 @@ import {
   formatDate,
   getWeekDates,
   parseReminderTime,
+  scheduleReminder,
 } from '../helper/index.js';
 import {
   asyncHandler,
@@ -19,6 +19,7 @@ import {
   BadRequest,
   Unauthorized,
 } from '../middlewares/index.js';
+import { sendPushNotification } from '../service/index.js';
 
 export const createProfile = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
@@ -292,6 +293,13 @@ export const setReminder = asyncHandler(async (req, res) => {
         )}) must be before shift start time (${todayShift.shift.start}).`
       );
     }
+
+    await sendPushNotification(user._id, {
+      type: 'reminder',
+      title: 'Reminder Set',
+      message: `Clock-in reminder set for ${convertTo12Hour(clockInReminder)}`,
+      status: 'clockInSet',
+    });
   }
 
   if (clockOutReminder) {
@@ -303,11 +311,22 @@ export const setReminder = asyncHandler(async (req, res) => {
         )}) must be before shift end time (${todayShift.shift.end}).`
       );
     }
+
+    await sendPushNotification(user._id, {
+      type: 'reminder',
+      title: 'Reminder Set',
+      message: `Clock-out reminder set for ${convertTo12Hour(
+        clockOutReminder
+      )}`,
+      status: 'clockOutSet',
+    });
   }
 
   user.reminders.clockIn = clockInReminder;
   user.reminders.clockOut = clockOutReminder;
   await user.save();
+
+  scheduleReminder();
 
   sendJsonResponse(res, 200, 'Reminder updated successfully', {
     reminders: {
@@ -535,102 +554,6 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
   };
 
   sendJsonResponse(res, 200, 'Notification succesful', { response });
-});
-
-export const sendNotification = asyncHandler(async (req, res) => {
-  const userId = req.currentUser;
-
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
-
-  const requests = await Request.find({
-    user: userId,
-    status: { $in: ['accepted', 'declined'] },
-  })
-    .sort({ createdAt: -1 })
-    .select('requestType status startDate endDate createdAt');
-
-  const user = await User.findById(userId).select(
-    'reminders.clockIn reminders.clockOut deviceToken'
-  );
-
-  // Process request notifications and send push notifications
-  const requestNotifications = await Promise.all(
-    requests.map(async (request) => {
-      const message =
-        request.status === 'accepted'
-          ? `Your ${request.requestType} request for ${formatDate(
-              request.startDate
-            )} to ${formatDate(request.endDate)} has been accepted`
-          : `Your ${request.requestType} request for ${formatDate(
-              request.startDate
-            )} to ${formatDate(request.endDate)} has been declined`;
-
-      const notificationData = {
-        type: 'request',
-        title: `${request.requestType} Request ${request.status}`,
-        message,
-        status: request.status,
-        requestType: request.requestType,
-      };
-
-      // Send push notification for each request
-      await sendPushNotification(userId, notificationData);
-
-      return {
-        ...notificationData,
-        createdAt: request.createdAt,
-        sortDate: request.createdAt,
-      };
-    })
-  );
-
-  const currentDate = new Date();
-  const reminderNotifications = [];
-
-  // Process clock-in reminder and send push notification
-  if (user.reminders.clockIn) {
-    const clockInData = {
-      type: 'reminder',
-      title: 'Clock In Reminder',
-      message: `Daily clock-in reminder set for ${user.reminders.clockIn}`,
-      status: 'clockIn',
-    };
-
-    await sendPushNotification(userId, clockInData);
-
-    reminderNotifications.push({
-      ...clockInData,
-      time: user.reminders.clockIn,
-      sortDate: currentDate,
-    });
-  }
-
-  // Process clock-out reminder and send push notification
-  if (user.reminders.clockOut) {
-    const clockOutData = {
-      type: 'reminder',
-      title: 'Clock Out Reminder',
-      message: `Daily clock-out reminder set for ${user.reminders.clockOut}`,
-      status: 'clockOut',
-    };
-
-    await sendPushNotification(userId, clockOutData);
-
-    reminderNotifications.push({
-      ...clockOutData,
-      time: user.reminders.clockOut,
-      sortDate: currentDate,
-    });
-  }
-
-  const allNotifications = [
-    ...requestNotifications,
-    ...reminderNotifications,
-  ].sort((a, b) => b.sortDate - a.sortDate);
-
-  sendJsonResponse(res, 200, 'Notification successful', { response });
 });
 
 export const userLogout = asyncHandler(async (req, res) => {

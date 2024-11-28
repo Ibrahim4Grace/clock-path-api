@@ -1,4 +1,8 @@
 import { User } from '../models/index.js';
+import { log } from '../utils/index.js';
+import cron from 'node-cron';
+import { convertTo12Hour } from '../helper/index.js';
+import { sendPushNotification } from '../service/index.js';
 import {
   asyncHandler,
   BadRequest,
@@ -33,7 +37,6 @@ const formatTime = (date) => {
 // Check if it's time to send a reminder
 const shouldSendReminder = (targetTime) => {
   const now = new Date();
-  // Check if current time is within 1 minute of target time
   return Math.abs(now - targetTime) <= 60000;
 };
 
@@ -111,4 +114,54 @@ export const checkReminders = asyncHandler(async (req, res) => {
       : 'No current reminders',
     data: reminders,
   };
+});
+
+// Separate function to handle scheduled reminders
+export const scheduleReminder = asyncHandler(async () => {
+  try {
+    const currentHour = new Date().getHours();
+    const currentMinute = new Date().getMinutes();
+    const timeString = `${currentHour}:${currentMinute}`;
+
+    const users = await User.find({
+      $or: [
+        { 'reminders.clockIn': timeString },
+        { 'reminders.clockOut': timeString },
+      ],
+    }).select('_id reminders deviceToken');
+
+    for (const user of users) {
+      if (user.reminders.clockIn === timeString) {
+        await sendPushNotification(user._id, {
+          type: 'reminder',
+          title: 'Clock In Reminder',
+          message: `Time to clock in - ${convertTo12Hour(
+            user.reminders.clockIn
+          )}`,
+          status: 'clockIn',
+        });
+      }
+
+      if (user.reminders.clockOut === timeString) {
+        await sendPushNotification(user._id, {
+          type: 'reminder',
+          title: 'Clock Out Reminder',
+          message: `Time to clock out - ${convertTo12Hour(
+            user.reminders.clockOut
+          )}`,
+          status: 'clockOut',
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error in scheduleReminder:', error);
+    throw new Error('Error occurred while scheduling reminders');
+  }
+});
+
+cron.schedule('* * * * *', () => {
+  scheduleReminder().catch((error) => {
+    console.error('Error in scheduled reminder:', error);
+    log.error('Error in scheduled reminder:', error); // Add more context if needed
+  });
 });

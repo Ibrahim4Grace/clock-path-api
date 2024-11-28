@@ -430,7 +430,7 @@ export const updateRequestStatus = asyncHandler(async (req, res) => {
   }
 
   await sendPushNotification(request.user, {
-    type: `${request.requestType}`,
+    type: `Request`,
     title: `${request.reason}`,
     message: `Your ${request.requestType} request for ${
       request.note
@@ -445,32 +445,6 @@ export const updateRequestStatus = asyncHandler(async (req, res) => {
     status: request.status,
   });
 });
-
-// export const updateRequestStatus = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-//   const { status } = req.body;
-
-//   if (!['accepted', 'declined'].includes(status)) {
-//     throw new BadRequest(
-//       'Invalid status. Only "accepted" or "declined" are allowed.'
-//     );
-//   }
-
-//   const request = await Request.findByIdAndUpdate(
-//     id,
-//     { status },
-//     { new: true }
-//   ).populate('user', 'full_name role');
-
-//   if (!request) {
-//     throw new ResourceNotFound('Request not found');
-//   }
-
-//   sendJsonResponse(res, 200, `Request ${status} successfully`, {
-//     request,
-//     status: request.status,
-//   });
-// });
 
 export const getAttendanceSummary = asyncHandler(async (req, res) => {
   const users = res.paginatedResults.results;
