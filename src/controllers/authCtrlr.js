@@ -265,10 +265,8 @@ export const userLogin = asyncHandler(async (req, res) => {
     throw new Unauthorized('Invalid email or passwordd');
   }
 
-  // Update deviceToken if provided
   if (deviceToken) {
-    user.deviceToken = deviceToken;
-    await user.save();
+    await User.findByIdAndUpdate(user._id, { deviceToken }, { new: true });
   }
 
   const userId = user._id.toString();

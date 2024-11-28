@@ -1,4 +1,4 @@
-import { User } from '../models/index.js';
+import { User, Notification } from '../models/index.js';
 import { admins } from '../config/firebase/index.js';
 import { asyncHandler } from '../middlewares/index.js';
 
