@@ -249,7 +249,7 @@ export const userSetNewPassword = asyncHandler(async (req, res) => {
 });
 
 export const userLogin = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, deviceToken } = req.body;
 
   const user = await User.findOne({ email }).select('+password');
   if (!user) {
@@ -263,6 +263,12 @@ export const userLogin = asyncHandler(async (req, res) => {
   const isPasswordMatch = await user.matchPassword(password);
   if (!isPasswordMatch) {
     throw new Unauthorized('Invalid email or passwordd');
+  }
+
+  // Update deviceToken if provided
+  if (deviceToken) {
+    user.deviceToken = deviceToken;
+    await user.save();
   }
 
   const userId = user._id.toString();

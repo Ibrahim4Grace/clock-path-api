@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema(
     work_days: [workDaySchema],
     image: { imageId: String, imageUrl: String },
     isEmailVerified: { type: Boolean, default: false },
+    deviceToken: [String],
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Company',

@@ -539,37 +539,98 @@ export const getNotificationsAndReminders = asyncHandler(async (req, res) => {
 
 export const sendNotification = asyncHandler(async (req, res) => {
   const userId = req.currentUser;
-  const { deviceToken, title, body } = req.body;
 
-  const message = {
-    token: deviceToken,
-    notification: {
-      title,
-      body,
-    },
-    android: {
-      priority: 'high',
-    },
-    apns: {
-      payload: {
-        aps: {
-          badge: 42,
-        },
-      },
-    },
-  };
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-  const notification = new Notification({
-    title,
-    body,
-    deviceToken,
-    userId,
-  });
-  await notification.save();
+  const requests = await Request.find({
+    user: userId,
+    status: { $in: ['accepted', 'declined'] },
+  })
+    .sort({ createdAt: -1 })
+    .select('requestType status startDate endDate createdAt');
 
-  const response = await admins.messaging().send(message);
+  const user = await User.findById(userId).select(
+    'reminders.clockIn reminders.clockOut deviceToken'
+  );
 
-  sendJsonResponse(res, 200, 'Notification sent successfully', response);
+  // Process request notifications and send push notifications
+  const requestNotifications = await Promise.all(
+    requests.map(async (request) => {
+      const message =
+        request.status === 'accepted'
+          ? `Your ${request.requestType} request for ${formatDate(
+              request.startDate
+            )} to ${formatDate(request.endDate)} has been accepted`
+          : `Your ${request.requestType} request for ${formatDate(
+              request.startDate
+            )} to ${formatDate(request.endDate)} has been declined`;
+
+      const notificationData = {
+        type: 'request',
+        title: `${request.requestType} Request ${request.status}`,
+        message,
+        status: request.status,
+        requestType: request.requestType,
+      };
+
+      // Send push notification for each request
+      await sendPushNotification(userId, notificationData);
+
+      return {
+        ...notificationData,
+        createdAt: request.createdAt,
+        sortDate: request.createdAt,
+      };
+    })
+  );
+
+  const currentDate = new Date();
+  const reminderNotifications = [];
+
+  // Process clock-in reminder and send push notification
+  if (user.reminders.clockIn) {
+    const clockInData = {
+      type: 'reminder',
+      title: 'Clock In Reminder',
+      message: `Daily clock-in reminder set for ${user.reminders.clockIn}`,
+      status: 'clockIn',
+    };
+
+    await sendPushNotification(userId, clockInData);
+
+    reminderNotifications.push({
+      ...clockInData,
+      time: user.reminders.clockIn,
+      sortDate: currentDate,
+    });
+  }
+
+  // Process clock-out reminder and send push notification
+  if (user.reminders.clockOut) {
+    const clockOutData = {
+      type: 'reminder',
+      title: 'Clock Out Reminder',
+      message: `Daily clock-out reminder set for ${user.reminders.clockOut}`,
+      status: 'clockOut',
+    };
+
+    await sendPushNotification(userId, clockOutData);
+
+    reminderNotifications.push({
+      ...clockOutData,
+      time: user.reminders.clockOut,
+      sortDate: currentDate,
+    });
+  }
+
+  const allNotifications = [
+    ...requestNotifications,
+    ...reminderNotifications,
+  ].sort((a, b) => b.sortDate - a.sortDate);
+
+  sendJsonResponse(res, 200, 'Notification successful', { response });
 });
 
 export const userLogout = asyncHandler(async (req, res) => {
