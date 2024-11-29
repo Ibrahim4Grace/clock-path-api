@@ -20,20 +20,28 @@ export const sendPushNotification = asyncHandler(
       data: {
         type: type || '',
         status: status || '',
-        title: requestType || '',
-        requestType: requestType || '',
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        timestamp: new Date().getTime().toString(),
       },
       android: {
         priority: 'high',
+        notification: {
+          channelId: 'reminders',
+          defaultSound: true,
+        },
       },
       apns: {
         payload: {
           aps: {
             badge: 1,
+            sound: 'default',
+            'content-available': 1,
+            priority: 10,
           },
-          type: type || '',
-          status: status || '',
-          requestType: requestType || '',
+        },
+        headers: {
+          'apns-push-type': 'alert',
+          'apns-priority': '10',
         },
       },
     };
@@ -45,9 +53,19 @@ export const sendPushNotification = asyncHandler(
       userId,
       status,
       requestType,
+      deviceToken: user.deviceToken,
+      delivered: false,
     });
     await notification.save();
 
-    return await admins.messaging().send(firebaseMessage);
+    const result = await admins.messaging().send(firebaseMessage);
+
+    await Notification.findByIdAndUpdate(notification._id, {
+      delivered: true,
+      deliveryAttemptTime: new Date(),
+      messageId: result,
+    });
+
+    return result;
   }
 );
